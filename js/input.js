@@ -34,8 +34,8 @@ class InputHandler {
   /** Получить координаты события относительно canvas */
   _getPos(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const scaleX = this.canvas.width / rect.width;
-    const scaleY = this.canvas.height / rect.height;
+    const scaleX = this.renderer.viewWidth() / rect.width;
+    const scaleY = this.renderer.viewHeight() / rect.height;
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY

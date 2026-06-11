@@ -27,6 +27,21 @@ class Renderer {
     this._tileImage.onload = function() { self._tileReady = true; };
     this._tileImage.src = 'assets/Tile.webp';
     this._portalGlow = 0;
+    this._viewW = null;
+    this._viewH = null;
+  }
+
+  setViewSize(w, h) {
+    this._viewW = w;
+    this._viewH = h;
+  }
+
+  viewWidth() {
+    return this._viewW != null ? this._viewW : this.canvas.width;
+  }
+
+  viewHeight() {
+    return this._viewH != null ? this._viewH : this.canvas.height;
   }
 
   setBackgroundIndex(idx) {
@@ -35,7 +50,7 @@ class Renderer {
 
   layout(board) {
     this._board = board;
-    var w = this.canvas.width, h = this.canvas.height;
+    var w = this.viewWidth(), h = this.viewHeight();
     var gap = CONFIG.CELL_GAP;
     var narrow = w < 720;
     var short = h < 620;
@@ -76,7 +91,7 @@ class Renderer {
 
   draw(board, animState) {
     if (!animState) animState = {};
-    var ctx = this.ctx, w = this.canvas.width, h = this.canvas.height;
+    var ctx = this.ctx, w = this.viewWidth(), h = this.viewHeight();
     var now = performance.now();
     if (!this._frameTime) this._frameTime = now;
     var dt = now - this._frameTime;

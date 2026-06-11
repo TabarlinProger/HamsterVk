@@ -1086,7 +1086,7 @@ class Game {
 
   _drawMenuBg() {
     var ctx = this.renderer.ctx;
-    var w = this.canvas.width, h = this.canvas.height;
+    var w = this.renderer.viewWidth(), h = this.renderer.viewHeight();
     ctx.clearRect(0, 0, w, h);
     if (this._menuBgImage && this._menuBgImage.complete && this._menuBgImage.naturalWidth > 0) {
       try { ctx.drawImage(this._menuBgImage, 0, 0, w, h); } catch(e) {}
@@ -1301,11 +1301,25 @@ class Game {
     var viewport = window.visualViewport || null;
     var w = Math.round(viewport ? viewport.width : window.innerWidth);
     var h = Math.round(viewport ? viewport.height : window.innerHeight);
-    if (this._canvasWidth === w && this._canvasHeight === h) return;
+    var isMobile = w <= 720;
+    var dpr = isMobile ? Math.min(window.devicePixelRatio || 1, 3) : 1;
+    if (this._canvasWidth === w && this._canvasHeight === h && this._canvasDpr === dpr) return;
     this._canvasWidth = w;
     this._canvasHeight = h;
-    this.canvas.width = w; this.canvas.height = h;
-    this.canvas.style.width = w + 'px'; this.canvas.style.height = h + 'px';
+    this._canvasDpr = dpr;
+    this.canvas.width = w * dpr;
+    this.canvas.height = h * dpr;
+    this.canvas.style.width = w + 'px';
+    this.canvas.style.height = h + 'px';
+    var ctx = this.renderer.ctx;
+    if (dpr > 1) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
+    } else {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    this.renderer.setViewSize(w, h);
     if (this.board) this.renderer.layout(this.board);
   }
 

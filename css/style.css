@@ -584,19 +584,6 @@ button, input, select, textarea {
     border-radius: 19px;
   }
   .btn-icon img { width: 32px; height: 32px; }
-  .btn-pause {
-    width: 100px; height: 100px;
-    border-radius: 32px;
-  }
-  .btn-pause img { width: 53px; height: 53px; }
-  .btn-pause { top: 13px; left: 13px; }
-  #btn-hint {
-    width: 75px; height: 75px;
-    top: 127px; left: 13px;
-    border-radius: 24px;
-  }
-  #btn-hint img { width: 40px; height: 40px; }
-  
   .hud-hearts img { width: 34px; height: 34px; }
   #hud-counter-img { width: 20px; height: 20px; }
   #hud-remaining { font-size: 16px; }
@@ -1127,6 +1114,39 @@ body {
   .settings-music-row {
     flex-direction: column;
   }
+
+  .btn-pause {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+
+  .btn-pause img {
+    width: 32px;
+    height: 32px;
+  }
+
+  #btn-hint {
+    top: calc(var(--safe-top) + var(--ui-edge) + 58px);
+    left: calc(var(--safe-left) + var(--hud-edge));
+    width: 44px;
+    height: 44px;
+  }
+
+  #btn-hint img {
+    width: 28px;
+    height: 28px;
+  }
+
+  #hud-hint-count {
+    top: calc(50% + 8px);
+    left: calc(50% + 8px + 10px);
+    font-size: 14px;
+  }
+
+  .hud-counter {
+    top: calc(var(--safe-top) + var(--ui-edge) + 120px);
+  }
 }
 
 @media (max-width: 420px) {
@@ -1193,25 +1213,25 @@ body {
   }
 
   .btn-pause {
-    width: 96px;
-    height: 96px;
-    border-radius: 32px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
   }
 
   .btn-pause img {
-    width: 56px;
-    height: 56px;
+    width: 28px;
+    height: 28px;
   }
 
   #btn-hint {
-    top: calc(var(--safe-top) + var(--ui-edge) + 96px);
-    width: 76px;
-    height: 76px;
+    top: calc(var(--safe-top) + var(--ui-edge) + 52px);
+    width: 40px;
+    height: 40px;
   }
 
   #btn-hint img {
-    width: 44px;
-    height: 44px;
+    width: 26px;
+    height: 26px;
   }
 
   .hud-hearts img {
@@ -1220,7 +1240,7 @@ body {
   }
 
   .hud-counter {
-    top: calc(var(--safe-top) + var(--ui-edge) + 48px);
+    top: calc(var(--safe-top) + var(--ui-edge) + 96px);
   }
 
   .hud-timer {
