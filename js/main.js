@@ -316,6 +316,7 @@ class Game {
     var self = this;
     this._resize();
     window.addEventListener('resize', function() { self._scheduleResize(); });
+    window.addEventListener('orientationchange', function() { self._scheduleResize(); });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', function() { self._scheduleResize(); });
       window.visualViewport.addEventListener('scroll', function() { self._scheduleResize(); });
@@ -714,22 +715,96 @@ class Game {
     return d.innerHTML;
   }
 
+  _getVkPlatform() {
+    if (this._vkPlatform != null) return this._vkPlatform;
+    try {
+      var search = window.location.search || '';
+      var match = search.match(/[?&]vk_platform=([^&]+)/);
+      this._vkPlatform = match ? decodeURIComponent(match[1]) : '';
+    } catch (e) {
+      this._vkPlatform = '';
+    }
+    return this._vkPlatform;
+  }
+
+  _isDesktopVk() {
+    var platform = this._getVkPlatform();
+    if (platform.indexOf('desktop') === 0) return true;
+    if (platform === 'web_external') return true;
+    if (!platform && (window.innerWidth || 0) > 720) return true;
+    return false;
+  }
+
+  _preloadVkAds() {
+    if (!this._vkBridge) return;
+    var bridge = this._vkBridge;
+    ['interstitial', 'reward'].forEach(function(fmt) {
+      bridge.send('VKWebAppCheckNativeAds', { ad_format: fmt }).catch(function() {});
+    });
+    bridge.send('VKWebAppCheckBannerAd').catch(function() {});
+  }
+
+  _showVkBannerAd(onSuccess, onError) {
+    if (!this._vkBridge) {
+      if (onError) onError(new Error('No VK Bridge'));
+      return;
+    }
+    this._vkBridge.send('VKWebAppShowBannerAd', {
+      banner_location: 'bottom',
+      layout_type: 'resize',
+      orientation: 'horizontal'
+    })
+      .then(function(data) {
+        if (!data || data.result === false) throw new Error('Banner ad was not shown');
+        if (onSuccess) onSuccess(data);
+      })
+      .catch(function(err) {
+        console.error('VK banner ad error:', err);
+        if (onError) onError(err);
+      });
+  }
+
   _showVkAd(adFormat, onSuccess, onLocalFallback, onError) {
     if (!this._vkBridge) {
       if (onLocalFallback) onLocalFallback();
       return;
     }
+    var self = this;
+    var showParams = { ad_format: adFormat };
+    if (adFormat === 'reward') showParams.use_waterfall = true;
+
+    function onShowResult(data) {
+      if (data && data.result === false) {
+        return Promise.reject(new Error('VK ad was not shown: ' + adFormat));
+      }
+      if (onSuccess) onSuccess(data);
+    }
+
+    function showNative(params) {
+      return self._vkBridge.send('VKWebAppShowNativeAds', params || showParams).then(onShowResult);
+    }
+
+    function fallbackAfterNativeFail(err) {
+      if (self._isDesktopVk() && adFormat === 'interstitial') {
+        return self._showVkBannerAd(onSuccess, function() {
+          if (onError) onError(err);
+        });
+      }
+      if (self._isDesktopVk() && adFormat === 'reward') {
+        return showNative({ ad_format: 'interstitial' }).catch(function() {
+          if (onError) onError(err);
+        });
+      }
+      if (onError) onError(err);
+    }
+
+    // CheckNativeAds only reflects preload; always attempt ShowNativeAds afterward.
     this._vkBridge.send('VKWebAppCheckNativeAds', { ad_format: adFormat })
-      .then((check) => {
-        if (!check || !check.result) throw new Error('VK ad is not available: ' + adFormat);
-        return this._vkBridge.send('VKWebAppShowNativeAds', { ad_format: adFormat });
-      })
-      .then(() => {
-        if (onSuccess) onSuccess();
-      })
-      .catch((err) => {
+      .catch(function() { return null; })
+      .then(function() { return showNative(); })
+      .catch(function(err) {
         console.error('VK ad error:', adFormat, err);
-        if (onError) onError(err);
+        return fallbackAfterNativeFail(err);
       });
   }
 
@@ -1302,15 +1377,22 @@ class Game {
     var w = Math.round(viewport ? viewport.width : window.innerWidth);
     var h = Math.round(viewport ? viewport.height : window.innerHeight);
     var isMobile = w <= 720;
-    var dpr = isMobile ? Math.min(window.devicePixelRatio || 1, 3) : 1;
-    if (this._canvasWidth === w && this._canvasHeight === h && this._canvasDpr === dpr) return;
-    this._canvasWidth = w;
-    this._canvasHeight = h;
+    var dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
+    if (isMobile) {
+      this.canvas.style.width = '';
+      this.canvas.style.height = '';
+    } else {
+      this.canvas.style.width = w + 'px';
+      this.canvas.style.height = h + 'px';
+    }
+    var displayW = this.canvas.clientWidth || w;
+    var displayH = this.canvas.clientHeight || h;
+    if (this._canvasWidth === displayW && this._canvasHeight === displayH && this._canvasDpr === dpr) return;
+    this._canvasWidth = displayW;
+    this._canvasHeight = displayH;
     this._canvasDpr = dpr;
-    this.canvas.width = w * dpr;
-    this.canvas.height = h * dpr;
-    this.canvas.style.width = w + 'px';
-    this.canvas.style.height = h + 'px';
+    this.canvas.width = Math.round(displayW * dpr);
+    this.canvas.height = Math.round(displayH * dpr);
     var ctx = this.renderer.ctx;
     if (dpr > 1) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1319,7 +1401,7 @@ class Game {
     } else {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
-    this.renderer.setViewSize(w, h);
+    this.renderer.setViewSize(displayW, displayH, dpr);
     if (this.board) this.renderer.layout(this.board);
   }
 
@@ -1473,6 +1555,7 @@ document.addEventListener('DOMContentLoaded', function() {
   vkBridge.send('VKWebAppInit').then(function() {
     whenGameReady(function() {
       game._vkBridge = vkBridge;
+      game._preloadVkAds();
     });
   }).catch(function(err) {
     console.error('VK Bridge init error:', err);

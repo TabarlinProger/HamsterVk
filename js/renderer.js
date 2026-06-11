@@ -29,11 +29,15 @@ class Renderer {
     this._portalGlow = 0;
     this._viewW = null;
     this._viewH = null;
+    this._dpr = 1;
+    this._crispDraw = false;
   }
 
-  setViewSize(w, h) {
+  setViewSize(w, h, dpr) {
     this._viewW = w;
     this._viewH = h;
+    this._dpr = dpr || 1;
+    this._crispDraw = w <= 720 && this._dpr > 1;
   }
 
   viewWidth() {
@@ -42,6 +46,11 @@ class Renderer {
 
   viewHeight() {
     return this._viewH != null ? this._viewH : this.canvas.height;
+  }
+
+  _prepImageQuality(ctx) {
+    ctx.imageSmoothingEnabled = true;
+    if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
   }
 
   setBackgroundIndex(idx) {
@@ -75,7 +84,13 @@ class Renderer {
 
   cellCenter(row, col) {
     var gap = CONFIG.CELL_GAP;
-    return { x: this.offsetX + col * (this.tileSize + gap) + this.tileSize / 2, y: this.offsetY + row * (this.tileSize + gap) + this.tileSize / 2 };
+    var x = this.offsetX + col * (this.tileSize + gap) + this.tileSize / 2;
+    var y = this.offsetY + row * (this.tileSize + gap) + this.tileSize / 2;
+    if (this._crispDraw) {
+      x = Math.round(x);
+      y = Math.round(y);
+    }
+    return { x: x, y: y };
   }
 
   pixelToCell(px, py) {
@@ -109,9 +124,11 @@ class Renderer {
     var drawn = false;
     var bgImg = this._bgImages[this._bgIndex];
     if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+      this._prepImageQuality(ctx);
       try { ctx.drawImage(bgImg, 0, 0, w, h); drawn = true; } catch (e) {}
     }
     if (!drawn && this._bgImages[0] && this._bgImages[0].complete && this._bgImages[0].naturalWidth > 0) {
+      this._prepImageQuality(ctx);
       try { ctx.drawImage(this._bgImages[0], 0, 0, w, h); drawn = true; } catch (e) {}
     }
     if (!drawn) {
@@ -144,12 +161,14 @@ class Renderer {
     var gridW = board.cols * (ts + gap) - gap;
     var gridH = board.rows * (ts + gap) - gap;
 
-    // Draw Tile.webp +20%, no clipping
+    // Draw Tile.webp — on mobile draw at native scale to avoid upscaling blur
     if (this._tileReady) {
-      var scale = 1.20;
+      var narrow = this.viewWidth() < 720;
+      var scale = narrow ? 1.0 : 1.20;
       var tw = gridW * scale, th = gridH * scale;
       var tx = this.offsetX - (tw - gridW) / 2;
       var ty = this.offsetY - (th - gridH) / 2;
+      this._prepImageQuality(ctx);
       try { ctx.drawImage(this._tileImage, tx, ty, tw, th); } catch(e) {}
     }
 
@@ -187,6 +206,7 @@ class Renderer {
           var tsw = teleportSprite.width, tsh = teleportSprite.height;
           var tScale = baseMax * 0.95 / Math.max(tsw, tsh);
           var tdw = tsw * tScale, tdh = tsh * tScale;
+          self._prepImageQuality(ctx);
           ctx.drawImage(teleportSprite, -tdw / 2, -tdh / 2, tdw, tdh);
         }
 
@@ -210,6 +230,7 @@ class Renderer {
         ctx.lineDashOffset = -self._animTime * 0.05;
         ctx.beginPath(); ctx.arc(0, 0, half + 3, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       }
+      self._prepImageQuality(ctx);
       ctx.drawImage(sprite, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
     });
@@ -295,7 +316,10 @@ class Renderer {
       ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3; ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 14;
       ctx.beginPath(); ctx.arc(0, 0, half + 2, 0, Math.PI * 2); ctx.stroke(); ctx.shadowColor = 'transparent';
     }
+    var smooth = ctx.imageSmoothingEnabled;
+    this._prepImageQuality(ctx);
     ctx.drawImage(spriteCanvas, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+    ctx.imageSmoothingEnabled = smooth;
     ctx.restore();
   }
 

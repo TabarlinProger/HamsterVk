@@ -1127,7 +1127,7 @@ body {
   }
 
   #btn-hint {
-    top: calc(var(--safe-top) + var(--ui-edge) + 58px);
+    top: calc(var(--safe-top) + var(--ui-edge) + 15px + 52px);
     left: calc(var(--safe-left) + var(--hud-edge));
     width: 44px;
     height: 44px;
@@ -1145,7 +1145,7 @@ body {
   }
 
   .hud-counter {
-    top: calc(var(--safe-top) + var(--ui-edge) + 120px);
+    top: calc(var(--safe-top) + var(--ui-edge) + clamp(74px, 9vw, 129px) + 20px);
   }
 }
 
@@ -1224,7 +1224,8 @@ body {
   }
 
   #btn-hint {
-    top: calc(var(--safe-top) + var(--ui-edge) + 52px);
+    top: calc(var(--safe-top) + var(--ui-edge) + 15px + 48px);
+    left: calc(var(--safe-left) + var(--hud-edge));
     width: 40px;
     height: 40px;
   }
@@ -1240,7 +1241,7 @@ body {
   }
 
   .hud-counter {
-    top: calc(var(--safe-top) + var(--ui-edge) + 96px);
+    top: calc(var(--safe-top) + var(--ui-edge) + 48px + 20px);
   }
 
   .hud-timer {

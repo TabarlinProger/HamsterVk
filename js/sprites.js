@@ -117,6 +117,8 @@ class SpriteManager {
         canvas.width = w;
         canvas.height = h;
         var ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, cb.left, rb.top, w, h, 0, 0, w, h);
         frames.push(canvas);
       }
@@ -134,6 +136,8 @@ class SpriteManager {
       canvas.width = w;
       canvas.height = h;
       var ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, cb.left, rowBounds.top, w, h, 0, 0, w, h);
       frames.push(canvas);
     }
