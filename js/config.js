@@ -53,11 +53,15 @@ const CONFIG = {
     1: Infinity // любой результат
   },
 
-  MOBILE_MAX_SHORT_SIDE: 720,
+  MOBILE_MAX_WIDTH: 720,
+  MOBILE_LANDSCAPE_MAX_HEIGHT: 520,
+  MOBILE_LANDSCAPE_MAX_WIDTH: 900,
 
   isMobileViewport(w, h) {
     var vw = w != null ? w : window.innerWidth;
     var vh = h != null ? h : window.innerHeight;
-    return Math.min(vw, vh) <= this.MOBILE_MAX_SHORT_SIDE;
+    if (vw <= this.MOBILE_MAX_WIDTH) return true;
+    if (vh <= this.MOBILE_LANDSCAPE_MAX_HEIGHT && vw <= this.MOBILE_LANDSCAPE_MAX_WIDTH) return true;
+    return false;
   }
 };

@@ -961,50 +961,6 @@ body {
   height: clamp(48px, 7vw, 69px);
 }
 
-#chapters-carousel {
-  gap: clamp(18px, 4vw, 48px);
-  padding: 24px max(calc(var(--safe-left) + var(--ui-edge)), calc(50% - min(305px, 40vw))) 24px max(calc(var(--safe-right) + var(--ui-edge)), calc(50% - min(305px, 40vw)));
-  align-items: center;
-}
-
-.chapter-slide {
-  flex: 0 0 clamp(280px, 72vw, 610px);
-  width: clamp(280px, 72vw, 610px);
-  height: clamp(220px, calc(72vw * 436 / 610), 436px);
-  max-height: min(436px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px));
-}
-
-.chapter-slide-title {
-  font-size: clamp(22px, 3.5vw, 30px);
-}
-
-.chapter-slide-subtitle {
-  font-size: clamp(14px, 2vw, 16px);
-}
-
-#levels-grid {
-  gap: clamp(18px, 4vw, 32px);
-  padding: clamp(72px, 12vh, 96px) max(calc(var(--safe-left) + var(--ui-edge)), calc(50% - min(152px, 36vw))) calc(var(--safe-bottom) + 32px) max(calc(var(--safe-right) + var(--ui-edge)), calc(50% - min(152px, 36vw)));
-  align-items: center;
-}
-
-.level-card {
-  flex: 0 0 clamp(220px, 42vw, 304px);
-  width: clamp(220px, 42vw, 304px);
-  height: clamp(300px, calc(42vw * 436 / 304), 436px);
-  max-height: min(436px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 80px));
-  padding: clamp(14px, 2.4vw, 20px);
-}
-
-.level-card-title {
-  font-size: clamp(20px, 3vw, 26px);
-}
-
-.level-card-stars img {
-  width: clamp(22px, 3vw, 26px);
-  height: clamp(22px, 3vw, 26px);
-}
-
 .hint-ad-actions,
 .settings-lang-row,
 .settings-music-row {
@@ -1078,7 +1034,141 @@ body {
   }
 }
 
-@media (max-width: 720px), (max-height: 720px) {
+@media (min-width: 721px) and (min-height: 521px) {
+  .btn-pause {
+    top: 19px;
+    left: 19px;
+    width: 150px;
+    height: 150px;
+    border-radius: 48px;
+  }
+
+  .btn-pause img {
+    width: 80px;
+    height: 80px;
+  }
+
+  #btn-hint {
+    top: 175px;
+    left: 44px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+  }
+
+  #btn-hint img {
+    width: 48px;
+    height: 48px;
+  }
+
+  #hud-hint-count {
+    top: calc(50% + 12px);
+    left: calc(50% + 12px + 15px);
+    font-size: 24px;
+  }
+
+  .hud-hearts {
+    top: 69px;
+    right: 19px;
+  }
+
+  .hud-hearts img {
+    width: 51px;
+    height: 51px;
+  }
+
+  .hud-counter {
+    top: 148px;
+    right: 19px;
+  }
+
+  #hud-counter-img {
+    width: 48px;
+    height: 48px;
+  }
+
+  #hud-remaining {
+    font-size: 36px;
+  }
+
+  .hud-timer {
+    top: calc(var(--safe-top) + var(--ui-edge) + 181px);
+  }
+
+  #hud-time {
+    font-size: 60px;
+  }
+
+  #chapters-carousel {
+    gap: 48px;
+    padding: 24px max(24px, calc(50% - 305px));
+  }
+
+  .chapter-slide {
+    flex: 0 0 610px;
+    width: 610px;
+    height: 436px;
+    max-height: none;
+  }
+
+  .chapter-slide-title {
+    font-size: 30px;
+  }
+
+  .chapter-slide-subtitle {
+    font-size: 16px;
+  }
+
+  #levels-grid {
+    gap: 32px;
+    padding: 80px max(24px, calc(50% - 152px)) 40px;
+  }
+
+  .level-card {
+    flex: 0 0 304px;
+    width: 304px;
+    height: 436px;
+    max-height: none;
+    padding: 20px;
+  }
+
+  .level-card-title {
+    font-size: 26px;
+  }
+
+  .level-card-stars img {
+    width: 26px;
+    height: 26px;
+  }
+
+  .chapter-slide.centered,
+  .level-card.centered {
+    transform: scale(1.1);
+  }
+
+  .tutorial-panel {
+    max-width: 533px;
+    width: 90%;
+  }
+
+  .tutorial-visual-wrap {
+    width: 240px;
+    height: 160px;
+  }
+
+  #main-menu {
+    justify-content: center;
+    padding-bottom: 0;
+  }
+
+  .panel,
+  .tutorial-panel,
+  .leader-panel {
+    width: min(92vw, 560px);
+  }
+}
+
+@media (max-width: 720px), ((max-height: 520px) and (max-width: 900px)) {
   html,
   body,
   body *:not(canvas):not(img):not(svg):not(path) {
