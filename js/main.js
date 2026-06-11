@@ -1379,14 +1379,14 @@ class Game {
     var isMobile = w <= 720;
     var dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
     if (isMobile) {
-      this.canvas.style.width = '';
-      this.canvas.style.height = '';
+      this.canvas.style.width = '100%';
+      this.canvas.style.height = '100%';
     } else {
       this.canvas.style.width = w + 'px';
       this.canvas.style.height = h + 'px';
     }
-    var displayW = this.canvas.clientWidth || w;
-    var displayH = this.canvas.clientHeight || h;
+    var displayW = Math.round(this.canvas.clientWidth) || w;
+    var displayH = Math.round(this.canvas.clientHeight) || h;
     if (this._canvasWidth === displayW && this._canvasHeight === displayH && this._canvasDpr === dpr) return;
     this._canvasWidth = displayW;
     this._canvasHeight = displayH;
@@ -1394,12 +1394,10 @@ class Game {
     this.canvas.width = Math.round(displayW * dpr);
     this.canvas.height = Math.round(displayH * dpr);
     var ctx = this.renderer.ctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (dpr > 1) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.imageSmoothingEnabled = true;
       if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
-    } else {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
     this.renderer.setViewSize(displayW, displayH, dpr);
     if (this.board) this.renderer.layout(this.board);

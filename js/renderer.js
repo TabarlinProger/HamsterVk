@@ -63,23 +63,41 @@ class Renderer {
     var gap = CONFIG.CELL_GAP;
     var narrow = w < 720;
     var short = h < 620;
-    var sidePadding = narrow ? 28 : Math.max(56, Math.min(160, w * 0.10));
-    var topReserve = narrow ? (short ? 108 : 150) : 96;
-    var bottomReserve = narrow ? 36 : 64;
+    var sidePadding, topReserve, bottomReserve;
+    if (narrow) {
+      sidePadding = 8;
+      topReserve = short ? 86 : 96;
+      bottomReserve = 12;
+    } else {
+      sidePadding = Math.max(56, Math.min(160, w * 0.10));
+      topReserve = 96;
+      bottomReserve = 64;
+    }
     // Compute tile size from the usable area so HUD controls do not cover the board.
     var maxW = (w - sidePadding * 2) / 6 - gap;
     var maxH = (h - topReserve - bottomReserve) / 6 - gap;
     var refSize = Math.floor(Math.min(maxW, maxH));
     // Scale for actual grid size to maintain constant total area
     var scale = 6 / Math.max(board.rows, board.cols);
-    var minTileSize = narrow ? (short ? 26 : 32) : CONFIG.MIN_TILE_SIZE;
+    var minTileSize = CONFIG.MIN_TILE_SIZE;
     this._baseTileSize = Math.max(minTileSize, Math.min(CONFIG.MAX_TILE_SIZE, Math.floor(refSize * scale)));
-    this._baseTileSize = Math.floor(this._baseTileSize * 0.855);  // -14.5% grid area
+    if (!narrow) this._baseTileSize = Math.floor(this._baseTileSize * 0.855);  // -14.5% grid area (desktop only)
     this.tileSize = Math.floor(this._baseTileSize * 1.1);
     var gridW = board.cols * (this.tileSize + gap) - gap;
     var gridH = board.rows * (this.tileSize + gap) - gap;
     this.offsetX = Math.floor((w - gridW) / 2);
     this.offsetY = Math.floor(topReserve + (h - topReserve - bottomReserve - gridH) / 2);
+  }
+
+  _tileDrawScale(gridW, gridH, preferScale) {
+    if (!this._tileReady || !this._tileImage.naturalWidth || !this._tileImage.naturalHeight) {
+      return preferScale;
+    }
+    var maxScale = Math.min(
+      this._tileImage.naturalWidth / gridW,
+      this._tileImage.naturalHeight / gridH
+    );
+    return Math.min(preferScale, maxScale);
   }
 
   cellCenter(row, col) {
@@ -161,13 +179,14 @@ class Renderer {
     var gridW = board.cols * (ts + gap) - gap;
     var gridH = board.rows * (ts + gap) - gap;
 
-    // Draw Tile.webp — on mobile draw at native scale to avoid upscaling blur
+    // Draw Tile.webp — cap scale to source resolution to avoid upscaling blur
     if (this._tileReady) {
-      var narrow = this.viewWidth() < 720;
-      var scale = narrow ? 1.0 : 1.20;
-      var tw = gridW * scale, th = gridH * scale;
-      var tx = this.offsetX - (tw - gridW) / 2;
-      var ty = this.offsetY - (th - gridH) / 2;
+      var preferScale = 1.20;
+      var scale = this._tileDrawScale(gridW, gridH, preferScale);
+      var tw = Math.round(gridW * scale);
+      var th = Math.round(gridH * scale);
+      var tx = Math.round(this.offsetX - (tw - gridW) / 2);
+      var ty = Math.round(this.offsetY - (th - gridH) / 2);
       this._prepImageQuality(ctx);
       try { ctx.drawImage(this._tileImage, tx, ty, tw, th); } catch(e) {}
     }
@@ -307,7 +326,10 @@ class Renderer {
     else if (animType === 'run') spriteCanvas = SPRITES.getMoveFrame(frameIdx);
     else if (animType === 'bump') spriteCanvas = SPRITES.getHitFrame(frameIdx);
     if (!spriteCanvas) return;
-    var ts = this._baseTileSize, half = ts / 2, pad = ts * 0.1, imgSize = ts - pad * 2;
+    var narrow = this.viewWidth() < 720;
+    var ts = narrow ? this.tileSize : this._baseTileSize;
+    var half = this._baseTileSize / 2;
+    var imgSize = narrow ? Math.round(ts * 0.88) : Math.round(ts - ts * 0.2);
     var angle = SpriteManager.rotationFor(direction);
     ctx.save(); ctx.translate(cx, cy);
     if (opts.shake) { var intensity = 5 * Math.sin(opts.shake * Math.PI * 4) * (1 - opts.shake); ctx.translate(intensity, 0); }
