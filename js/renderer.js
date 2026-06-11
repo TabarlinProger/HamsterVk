@@ -91,6 +91,7 @@ class Renderer {
     var scale = 6 / Math.max(board.rows, board.cols);
     this._baseTileSize = Math.max(CONFIG.MIN_TILE_SIZE, Math.min(CONFIG.MAX_TILE_SIZE, Math.floor(refSize * scale)));
     if (!mobile) this._baseTileSize = Math.floor(this._baseTileSize * 0.855);
+    if (mobile) this._baseTileSize = Math.floor(this._baseTileSize * 0.8);
     this.tileSize = Math.floor(this._baseTileSize * 1.1);
     var gridW = board.cols * (this.tileSize + gap) - gap;
     var gridH = board.rows * (this.tileSize + gap) - gap;

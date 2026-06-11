@@ -1119,14 +1119,14 @@ body {
     gap: 14px;
     width: 100%;
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 64px);
-    padding-left: max(calc(50% - 44vw), calc(var(--safe-left) + var(--ui-edge)));
-    padding-right: max(calc(50% - 44vw), calc(var(--safe-right) + var(--ui-edge)));
+    padding-left: max(calc(50% - 22vw), calc(var(--safe-left) + var(--ui-edge)));
+    padding-right: max(calc(50% - 22vw), calc(var(--safe-right) + var(--ui-edge)));
   }
 
   .chapter-slide {
-    flex: 0 0 88vw;
-    width: 88vw;
-    height: min(calc(88vw * 436 / 610), calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px));
+    flex: 0 0 44vw;
+    width: 44vw;
+    height: min(calc(44vw * 436 / 610), calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px));
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px);
     border-radius: 20px;
   }
@@ -1142,14 +1142,14 @@ body {
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 48px);
     padding-top: calc(var(--safe-top) + 52px);
     padding-bottom: calc(var(--safe-bottom) + 20px);
-    padding-left: max(calc(50% - 34vw), calc(var(--safe-left) + var(--ui-edge)));
-    padding-right: max(calc(50% - 34vw), calc(var(--safe-right) + var(--ui-edge)));
+    padding-left: max(calc(50% - 17vw), calc(var(--safe-left) + var(--ui-edge)));
+    padding-right: max(calc(50% - 17vw), calc(var(--safe-right) + var(--ui-edge)));
   }
 
   .level-card {
-    flex: 0 0 68vw;
-    width: 68vw;
-    height: min(calc(68vw * 436 / 304), calc(100dvh - var(--safe-top) - var(--safe-bottom) - 88px));
+    flex: 0 0 34vw;
+    width: 34vw;
+    height: min(calc(34vw * 436 / 304), calc(100dvh - var(--safe-top) - var(--safe-bottom) - 88px));
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 88px);
     border-radius: 18px;
   }
@@ -1178,6 +1178,32 @@ body {
   #level-select .btn-back {
     top: calc(var(--safe-top) + var(--ui-edge));
     left: calc(var(--safe-left) + var(--ui-edge));
+  }
+
+  .tutorial-panel,
+  #hint-ad-screen .panel {
+    width: min(74vw, 336px);
+    padding: clamp(16px, 3vh, 24px) clamp(16px, 4vw, 24px);
+    gap: clamp(10px, 2vh, 16px);
+  }
+
+  .tutorial-panel h2,
+  #hint-ad-screen .panel h2 {
+    font-size: clamp(22px, 5vw, 32px);
+  }
+
+  .tutorial-visual-wrap {
+    width: min(160px, 40vw);
+    height: min(107px, 27vw);
+  }
+
+  #tutorial-text,
+  #hint-ad-screen .hint-ad-text {
+    font-size: clamp(14px, 3.6vw, 17px);
+  }
+
+  #hint-ad-screen .hint-ad-choice {
+    padding: 8px 14px;
   }
 
   .hint-ad-actions {
