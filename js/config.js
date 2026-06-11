@@ -51,5 +51,13 @@ const CONFIG = {
     3: 1.0,    // ≤ optimal
     2: 1.5,    // ≤ optimal * 1.5
     1: Infinity // любой результат
+  },
+
+  MOBILE_MAX_SHORT_SIDE: 720,
+
+  isMobileViewport(w, h) {
+    var vw = w != null ? w : window.innerWidth;
+    var vh = h != null ? h : window.innerHeight;
+    return Math.min(vw, vh) <= this.MOBILE_MAX_SHORT_SIDE;
   }
 };

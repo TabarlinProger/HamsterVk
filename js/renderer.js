@@ -37,7 +37,7 @@ class Renderer {
     this._viewW = w;
     this._viewH = h;
     this._dpr = dpr || 1;
-    this._crispDraw = w <= 720 && this._dpr > 1;
+    this._crispDraw = CONFIG.isMobileViewport(w, h) && this._dpr > 1;
   }
 
   viewWidth() {
@@ -61,32 +61,41 @@ class Renderer {
     this._board = board;
     var w = this.viewWidth(), h = this.viewHeight();
     var gap = CONFIG.CELL_GAP;
-    var narrow = w < 720;
+    var mobile = CONFIG.isMobileViewport(w, h);
+    var landscape = w > h;
     var short = h < 620;
-    var sidePadding, topReserve, bottomReserve;
-    if (narrow) {
-      sidePadding = 8;
+    var leftInset, rightInset, topReserve, bottomReserve;
+
+    if (mobile && landscape) {
+      leftInset = 56;
+      rightInset = 10;
+      topReserve = 34;
+      bottomReserve = 8;
+    } else if (mobile) {
+      leftInset = 8;
+      rightInset = 8;
       topReserve = short ? 86 : 96;
       bottomReserve = 12;
     } else {
-      sidePadding = Math.max(56, Math.min(160, w * 0.10));
+      leftInset = Math.max(56, Math.min(160, w * 0.10));
+      rightInset = leftInset;
       topReserve = 96;
       bottomReserve = 64;
     }
-    // Compute tile size from the usable area so HUD controls do not cover the board.
-    var maxW = (w - sidePadding * 2) / 6 - gap;
-    var maxH = (h - topReserve - bottomReserve) / 6 - gap;
+
+    var usableW = w - leftInset - rightInset;
+    var usableH = h - topReserve - bottomReserve;
+    var maxW = usableW / 6 - gap;
+    var maxH = usableH / 6 - gap;
     var refSize = Math.floor(Math.min(maxW, maxH));
-    // Scale for actual grid size to maintain constant total area
     var scale = 6 / Math.max(board.rows, board.cols);
-    var minTileSize = CONFIG.MIN_TILE_SIZE;
-    this._baseTileSize = Math.max(minTileSize, Math.min(CONFIG.MAX_TILE_SIZE, Math.floor(refSize * scale)));
-    if (!narrow) this._baseTileSize = Math.floor(this._baseTileSize * 0.855);  // -14.5% grid area (desktop only)
+    this._baseTileSize = Math.max(CONFIG.MIN_TILE_SIZE, Math.min(CONFIG.MAX_TILE_SIZE, Math.floor(refSize * scale)));
+    if (!mobile) this._baseTileSize = Math.floor(this._baseTileSize * 0.855);
     this.tileSize = Math.floor(this._baseTileSize * 1.1);
     var gridW = board.cols * (this.tileSize + gap) - gap;
     var gridH = board.rows * (this.tileSize + gap) - gap;
-    this.offsetX = Math.floor((w - gridW) / 2);
-    this.offsetY = Math.floor(topReserve + (h - topReserve - bottomReserve - gridH) / 2);
+    this.offsetX = Math.floor(leftInset + (usableW - gridW) / 2);
+    this.offsetY = Math.floor(topReserve + (usableH - gridH) / 2);
   }
 
   _tileDrawScale(gridW, gridH, preferScale) {
@@ -326,10 +335,8 @@ class Renderer {
     else if (animType === 'run') spriteCanvas = SPRITES.getMoveFrame(frameIdx);
     else if (animType === 'bump') spriteCanvas = SPRITES.getHitFrame(frameIdx);
     if (!spriteCanvas) return;
-    var narrow = this.viewWidth() < 720;
-    var ts = narrow ? this.tileSize : this._baseTileSize;
     var half = this._baseTileSize / 2;
-    var imgSize = narrow ? Math.round(ts * 0.88) : Math.round(ts - ts * 0.2);
+    var imgSize = Math.round(this._baseTileSize * 0.8);
     var angle = SpriteManager.rotationFor(direction);
     ctx.save(); ctx.translate(cx, cy);
     if (opts.shake) { var intensity = 5 * Math.sin(opts.shake * Math.PI * 4) * (1 - opts.shake); ctx.translate(intensity, 0); }

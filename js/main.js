@@ -1175,6 +1175,56 @@ class Game {
 
 
 
+  _getSelectCardMetrics(cardEl) {
+    var rect = cardEl ? cardEl.getBoundingClientRect() : null;
+    var w = rect && rect.width ? Math.round(rect.width) : 304;
+    var h = rect && rect.height ? Math.round(rect.height) : 436;
+    var isMobile = CONFIG.isMobileViewport();
+    var dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
+    return { w: w, h: h, dpr: dpr };
+  }
+
+  _paintLevelCardBackgrounds(bgCanvases, chapterIdx, sampleCard) {
+    if (!bgCanvases.length) return;
+    var metrics = this._getSelectCardMetrics(sampleCard);
+    var cardW = metrics.w;
+    var cardH = metrics.h;
+    var dpr = metrics.dpr;
+    var img = new Image();
+    img.onload = function() {
+      var sliceW = img.width / 10;
+      for (var i = 0; i < bgCanvases.length; i++) {
+        var canvas = bgCanvases[i];
+        var sliceIdx = parseInt(canvas.dataset.sliceIdx, 10);
+        canvas.width = Math.round(cardW * dpr);
+        canvas.height = Math.round(cardH * dpr);
+        var c = canvas.getContext('2d');
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        c.imageSmoothingEnabled = true;
+        if (c.imageSmoothingQuality) c.imageSmoothingQuality = 'high';
+        var scale = Math.max(cardW / sliceW, cardH / img.height);
+        var srcW = cardW / scale;
+        var srcH = cardH / scale;
+        var srcX = sliceIdx * sliceW + (sliceW - srcW) / 2;
+        var srcY = (img.height - srcH) / 2;
+        c.clearRect(0, 0, cardW, cardH);
+        c.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cardW, cardH);
+      }
+    };
+    img.onerror = function() {
+      for (var j = 0; j < bgCanvases.length; j++) {
+        var canvas = bgCanvases[j];
+        canvas.width = Math.round(cardW * dpr);
+        canvas.height = Math.round(cardH * dpr);
+        var ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, cardW, cardH);
+      }
+    };
+    img.src = 'assets/Background_' + chapterIdx + '.webp';
+  }
+
   _showLevelsView(chapterIdx) {
     this._currentChapter = chapterIdx;
     document.getElementById('chapters-carousel').classList.add('hidden');
@@ -1196,8 +1246,6 @@ class Game {
 
       var bgCanvas = document.createElement('canvas');
       bgCanvas.className = 'level-card-bg-canvas';
-      bgCanvas.width = 304;
-      bgCanvas.height = 436;
       var sliceIdx = lvlId - startLevel;
       bgCanvas.dataset.sliceIdx = sliceIdx;
 
@@ -1254,33 +1302,13 @@ class Game {
       });
     });
 
-    // Load chapter background, slice into 10 vertical columns, cover-fit each onto card
-    var img = new Image();
-    var self = this;
-    img.onload = function() {
-      var sliceW = img.width / 10;
-      var cardW = 304, cardH = 436;
-      for (var i = 0; i < bgCanvases.length; i++) {
-        var sliceIdx = parseInt(bgCanvases[i].dataset.sliceIdx);
-        var c = bgCanvases[i].getContext('2d');
-        // cover-fit: scale so the slice fills the card, crop overflow
-        var scale = Math.max(cardW / sliceW, cardH / img.height);
-        var srcW = cardW / scale;
-        var srcH = cardH / scale;
-        var srcX = sliceIdx * sliceW + (sliceW - srcW) / 2;
-        var srcY = (img.height - srcH) / 2;
-        c.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cardW, cardH);
-      }
-    };
-    img.onerror = function() {
-      // Fallback: fill canvases with a dark color
-      for (var i = 0; i < bgCanvases.length; i++) {
-        var c = bgCanvases[i].getContext('2d');
-        c.fillStyle = '#1a1a2e';
-        c.fillRect(0, 0, bgCanvases[i].width, bgCanvases[i].height);
-      }
-    };
-    img.src = 'assets/Background_' + chapterIdx + '.webp';
+    // Load chapter background after cards are laid out at their CSS size
+    var self4 = this;
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        self4._paintLevelCardBackgrounds(bgCanvases, chapterIdx, cardEls[0] || null);
+      });
+    });
 
     // Auto-scroll to current level, or center if all locked/completed
     setTimeout(function() {
@@ -1376,7 +1404,7 @@ class Game {
     var viewport = window.visualViewport || null;
     var w = Math.round(viewport ? viewport.width : window.innerWidth);
     var h = Math.round(viewport ? viewport.height : window.innerHeight);
-    var isMobile = w <= 720;
+    var isMobile = CONFIG.isMobileViewport(w, h);
     var dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
     if (isMobile) {
       this.canvas.style.width = '100%';
