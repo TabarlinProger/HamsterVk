@@ -19,6 +19,9 @@ class InputHandler {
   _bindEvents() {
     // Мышь
     this.canvas.addEventListener('click', (e) => this._handleClick(e));
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.canvas.addEventListener('selectstart', (e) => e.preventDefault());
+    this.canvas.addEventListener('dragstart', (e) => e.preventDefault());
     this.canvas.addEventListener('mousemove', (e) => this._handleMove(e));
     this.canvas.addEventListener('mouseleave', () => {
       this._hovered = null;
@@ -34,8 +37,10 @@ class InputHandler {
   /** Получить координаты события относительно canvas */
   _getPos(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const scaleX = this.renderer.viewWidth() / rect.width;
-    const scaleY = this.renderer.viewHeight() / rect.height;
+    const logicalWidth = this.canvas._logicalWidth || rect.width;
+    const logicalHeight = this.canvas._logicalHeight || rect.height;
+    const scaleX = logicalWidth / rect.width;
+    const scaleY = logicalHeight / rect.height;
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY

@@ -2,6 +2,9 @@ class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+    this.dpr = 1;
+    this.viewportWidth = canvas.width;
+    this.viewportHeight = canvas.height;
     this.tileSize = 60;
     this.offsetX = 0;
     this.offsetY = 0;
@@ -27,98 +30,42 @@ class Renderer {
     this._tileImage.onload = function() { self._tileReady = true; };
     this._tileImage.src = 'assets/Tile.webp';
     this._portalGlow = 0;
-    this._viewW = null;
-    this._viewH = null;
-    this._dpr = 1;
-    this._crispDraw = false;
-  }
-
-  setViewSize(w, h, dpr) {
-    this._viewW = w;
-    this._viewH = h;
-    this._dpr = dpr || 1;
-    this._crispDraw = CONFIG.isMobileViewport(w, h) && this._dpr > 1;
-  }
-
-  viewWidth() {
-    return this._viewW != null ? this._viewW : this.canvas.width;
-  }
-
-  viewHeight() {
-    return this._viewH != null ? this._viewH : this.canvas.height;
-  }
-
-  _prepImageQuality(ctx) {
-    ctx.imageSmoothingEnabled = true;
-    if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
   }
 
   setBackgroundIndex(idx) {
     this._bgIndex = Math.max(0, Math.min(9, idx || 0));
   }
 
-  layout(board) {
-    this._board = board;
-    var w = this.viewWidth(), h = this.viewHeight();
-    var gap = CONFIG.CELL_GAP;
-    var mobile = CONFIG.isMobileViewport(w, h);
-    var landscape = w > h;
-    var short = h < 620;
-    var leftInset, rightInset, topReserve, bottomReserve;
-
-    if (mobile && landscape) {
-      leftInset = 56;
-      rightInset = 10;
-      topReserve = 34;
-      bottomReserve = 8;
-    } else if (mobile) {
-      leftInset = 8;
-      rightInset = 8;
-      topReserve = short ? 86 : 96;
-      bottomReserve = 12;
-    } else {
-      leftInset = Math.max(56, Math.min(160, w * 0.10));
-      rightInset = leftInset;
-      topReserve = 96;
-      bottomReserve = 64;
-    }
-
-    var usableW = w - leftInset - rightInset;
-    var usableH = h - topReserve - bottomReserve;
-    var maxW = usableW / 6 - gap;
-    var maxH = usableH / 6 - gap;
-    var refSize = Math.floor(Math.min(maxW, maxH));
-    var scale = 6 / Math.max(board.rows, board.cols);
-    this._baseTileSize = Math.max(CONFIG.MIN_TILE_SIZE, Math.min(CONFIG.MAX_TILE_SIZE, Math.floor(refSize * scale)));
-    if (!mobile) this._baseTileSize = Math.floor(this._baseTileSize * 0.855);
-    if (mobile) this._baseTileSize = Math.floor(this._baseTileSize * 0.8);
-    this.tileSize = Math.floor(this._baseTileSize * 1.1);
-    var gridW = board.cols * (this.tileSize + gap) - gap;
-    var gridH = board.rows * (this.tileSize + gap) - gap;
-    this.offsetX = Math.floor(leftInset + (usableW - gridW) / 2);
-    this.offsetY = Math.floor(topReserve + (usableH - gridH) / 2);
+  setViewport(w, h, dpr) {
+    this.viewportWidth = w;
+    this.viewportHeight = h;
+    this.dpr = dpr || 1;
   }
 
-  _tileDrawScale(gridW, gridH, preferScale) {
-    if (!this._tileReady || !this._tileImage.naturalWidth || !this._tileImage.naturalHeight) {
-      return preferScale;
-    }
-    var maxScale = Math.min(
-      this._tileImage.naturalWidth / gridW,
-      this._tileImage.naturalHeight / gridH
-    );
-    return Math.min(preferScale, maxScale);
+  layout(board) {
+    this._board = board;
+    var w = this.viewportWidth || this.canvas.width, h = this.viewportHeight || this.canvas.height;
+    var gap = CONFIG.CELL_GAP;
+    // Compute tile size based on reference 6x6 grid
+    var maxW = (w - 40) / 6 - gap;
+    var maxH = (h - 120) / 6 - gap;
+    var refSize = Math.floor(Math.min(maxW, maxH));
+    // Scale for actual grid size to maintain constant total area
+    var scale = 6 / Math.max(board.rows, board.cols);
+    this._baseTileSize = Math.max(CONFIG.MIN_TILE_SIZE, Math.min(CONFIG.MAX_TILE_SIZE, Math.floor(refSize * scale)));
+    this._baseTileSize = Math.floor(this._baseTileSize * 0.855);  // -14.5% grid area
+    this._mobileLayout = w <= 700 || (w <= 1000 && h <= 500);
+    var mobileScale = this._mobileLayout ? 1.08 : 1;
+    this.tileSize = Math.floor(this._baseTileSize * 1.1 * mobileScale);
+    var gridW = board.cols * (this.tileSize + gap) - gap;
+    var gridH = board.rows * (this.tileSize + gap) - gap;
+    this.offsetX = Math.floor((w - gridW) / 2);
+    this.offsetY = Math.floor((h - gridH) / 2) + (this._mobileLayout ? 0 : 10);
   }
 
   cellCenter(row, col) {
     var gap = CONFIG.CELL_GAP;
-    var x = this.offsetX + col * (this.tileSize + gap) + this.tileSize / 2;
-    var y = this.offsetY + row * (this.tileSize + gap) + this.tileSize / 2;
-    if (this._crispDraw) {
-      x = Math.round(x);
-      y = Math.round(y);
-    }
-    return { x: x, y: y };
+    return { x: this.offsetX + col * (this.tileSize + gap) + this.tileSize / 2, y: this.offsetY + row * (this.tileSize + gap) + this.tileSize / 2 };
   }
 
   pixelToCell(px, py) {
@@ -134,13 +81,14 @@ class Renderer {
 
   draw(board, animState) {
     if (!animState) animState = {};
-    var ctx = this.ctx, w = this.viewWidth(), h = this.viewHeight();
+    var ctx = this.ctx, w = this.viewportWidth || this.canvas.width, h = this.viewportHeight || this.canvas.height;
     var now = performance.now();
     if (!this._frameTime) this._frameTime = now;
     var dt = now - this._frameTime;
     this._frameTime = now;
     this._animTime = (this._animTime || 0) + dt;
     this._portalGlow = 0.4 + 0.3 * Math.sin(this._animTime * 0.003);
+    ctx.setTransform(this.dpr || 1, 0, 0, this.dpr || 1, 0, 0);
     ctx.clearRect(0, 0, w, h);
     this._drawBackground(ctx, w, h, board, animState.reveal || 0);
     this._drawGrid(ctx, board);
@@ -152,11 +100,9 @@ class Renderer {
     var drawn = false;
     var bgImg = this._bgImages[this._bgIndex];
     if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
-      this._prepImageQuality(ctx);
       try { ctx.drawImage(bgImg, 0, 0, w, h); drawn = true; } catch (e) {}
     }
     if (!drawn && this._bgImages[0] && this._bgImages[0].complete && this._bgImages[0].naturalWidth > 0) {
-      this._prepImageQuality(ctx);
       try { ctx.drawImage(this._bgImages[0], 0, 0, w, h); drawn = true; } catch (e) {}
     }
     if (!drawn) {
@@ -189,15 +135,12 @@ class Renderer {
     var gridW = board.cols * (ts + gap) - gap;
     var gridH = board.rows * (ts + gap) - gap;
 
-    // Draw Tile.webp — cap scale to source resolution to avoid upscaling blur
+    // Draw Tile.webp +20%, no clipping
     if (this._tileReady) {
-      var preferScale = 1.20;
-      var scale = this._tileDrawScale(gridW, gridH, preferScale);
-      var tw = Math.round(gridW * scale);
-      var th = Math.round(gridH * scale);
-      var tx = Math.round(this.offsetX - (tw - gridW) / 2);
-      var ty = Math.round(this.offsetY - (th - gridH) / 2);
-      this._prepImageQuality(ctx);
+      var scale = 1.20;
+      var tw = gridW * scale, th = gridH * scale;
+      var tx = this.offsetX - (tw - gridW) / 2;
+      var ty = this.offsetY - (th - gridH) / 2;
       try { ctx.drawImage(this._tileImage, tx, ty, tw, th); } catch(e) {}
     }
 
@@ -235,7 +178,6 @@ class Renderer {
           var tsw = teleportSprite.width, tsh = teleportSprite.height;
           var tScale = baseMax * 0.95 / Math.max(tsw, tsh);
           var tdw = tsw * tScale, tdh = tsh * tScale;
-          self._prepImageQuality(ctx);
           ctx.drawImage(teleportSprite, -tdw / 2, -tdh / 2, tdw, tdh);
         }
 
@@ -256,10 +198,10 @@ class Renderer {
       ctx.save(); ctx.translate(center.x, center.y); ctx.rotate(angle);
       if (tube.type === 'rotatable' || tube.rotatable) {
         ctx.strokeStyle = CONFIG.ROTATING_INDICATOR; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
-        ctx.lineDashOffset = -self._animTime * 0.05;
+        var indicatorSpeed = self._mobileLayout ? 0.03 : 0.05;
+        ctx.lineDashOffset = -self._animTime * indicatorSpeed;
         ctx.beginPath(); ctx.arc(0, 0, half + 3, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       }
-      self._prepImageQuality(ctx);
       ctx.drawImage(sprite, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
     });
@@ -336,8 +278,7 @@ class Renderer {
     else if (animType === 'run') spriteCanvas = SPRITES.getMoveFrame(frameIdx);
     else if (animType === 'bump') spriteCanvas = SPRITES.getHitFrame(frameIdx);
     if (!spriteCanvas) return;
-    var half = this._baseTileSize / 2;
-    var imgSize = Math.round(this._baseTileSize * 0.8);
+    var ts = this._baseTileSize, half = ts / 2, pad = ts * 0.1, imgSize = (ts - pad * 2) * (this._mobileLayout ? 1.1 : 1);
     var angle = SpriteManager.rotationFor(direction);
     ctx.save(); ctx.translate(cx, cy);
     if (opts.shake) { var intensity = 5 * Math.sin(opts.shake * Math.PI * 4) * (1 - opts.shake); ctx.translate(intensity, 0); }
@@ -346,10 +287,7 @@ class Renderer {
       ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3; ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 14;
       ctx.beginPath(); ctx.arc(0, 0, half + 2, 0, Math.PI * 2); ctx.stroke(); ctx.shadowColor = 'transparent';
     }
-    var smooth = ctx.imageSmoothingEnabled;
-    this._prepImageQuality(ctx);
     ctx.drawImage(spriteCanvas, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
-    ctx.imageSmoothingEnabled = smooth;
     ctx.restore();
   }
 

@@ -440,21 +440,83 @@ class LevelManager {
 // ==================== STORAGE MANAGER ====================
 class StorageManager {
   static load() {
+    if (StorageManager._cache) return StorageManager._normalize(StorageManager._cache);
     try {
       var raw = localStorage.getItem(CONFIG.STORAGE_KEY);
       if (!raw) return StorageManager._defaultData();
       var data = JSON.parse(raw);
-      var def = StorageManager._defaultData();
-      return Object.assign({}, def, data, { settings: Object.assign({}, def.settings, data.settings) });
+      return StorageManager._normalize(data);
     } catch (e) {
       return StorageManager._defaultData();
     }
   }
 
   static save(data) {
+    data = StorageManager._normalize(data);
+    StorageManager._cache = data;
     try {
       localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
     } catch (e) {}
+    StorageManager._saveVk(data);
+  }
+
+  static initVkStorage(bridge) {
+    StorageManager._vkBridge = bridge;
+    if (!bridge || typeof bridge.send !== 'function') return Promise.resolve();
+    var keys = StorageManager._vkKeys();
+    return bridge.send('VKWebAppStorageGet', { keys: keys }).then(function(res) {
+      var values = {};
+      var entries = (res && res.keys) || [];
+      for (var i = 0; i < entries.length; i++) values[entries[i].key] = entries[i].value || '';
+
+      var raw = values[CONFIG.STORAGE_KEY] || '';
+      if (!raw && values[CONFIG.STORAGE_KEY + '_0']) {
+        raw = '';
+        for (var ci = 0; ci < StorageManager.VK_CHUNK_COUNT; ci++) {
+          raw += values[CONFIG.STORAGE_KEY + '_' + ci] || '';
+        }
+      }
+
+      if (raw) {
+        StorageManager._cache = StorageManager._normalize(JSON.parse(raw));
+        try { localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(StorageManager._cache)); } catch(e) {}
+      } else {
+        StorageManager._cache = StorageManager.load();
+      }
+      StorageManager._vkReady = true;
+      if (!raw) StorageManager._saveVk(StorageManager._cache);
+    }).catch(function(e) {
+      console.error('VK storage load error:', e);
+      StorageManager._cache = StorageManager.load();
+      StorageManager._vkReady = false;
+    });
+  }
+
+  static _saveVk(data) {
+    if (!StorageManager._vkReady || !StorageManager._vkBridge || typeof StorageManager._vkBridge.send !== 'function') return;
+    var raw = JSON.stringify(data);
+    var chunkSize = StorageManager.VK_CHUNK_SIZE;
+    for (var i = 0; i < StorageManager.VK_CHUNK_COUNT; i++) {
+      var value = raw.slice(i * chunkSize, (i + 1) * chunkSize);
+      StorageManager._vkBridge.send('VKWebAppStorageSet', {
+        key: CONFIG.STORAGE_KEY + '_' + i,
+        value: value
+      }).catch(function(e) {
+        console.error('VK storage save error:', e);
+      });
+    }
+    StorageManager._vkBridge.send('VKWebAppStorageSet', {
+      key: CONFIG.STORAGE_KEY,
+      value: ''
+    }).catch(function(e) {
+      console.error('VK storage cleanup error:', e);
+    });
+  }
+
+  static _vkKeys() {
+    var keys = [CONFIG.STORAGE_KEY];
+    for (var i = 0; i < StorageManager.VK_CHUNK_COUNT; i++) keys.push(CONFIG.STORAGE_KEY + '_' + i);
+    return keys;
   }
 
   static markCompleted(levelId, moves, livesRemaining) {
@@ -489,14 +551,28 @@ class StorageManager {
   }
 
   static resetProgress() {
+    StorageManager._cache = StorageManager._defaultData();
     localStorage.removeItem(CONFIG.STORAGE_KEY);
+    StorageManager._saveVk(StorageManager._cache);
+  }
+
+  static _normalize(data) {
+    var def = StorageManager._defaultData();
+    data = data || {};
+    return Object.assign({}, def, data, { settings: Object.assign({}, def.settings, data.settings) });
   }
 
   static _defaultData() {
     return {
       currentLevel: 1,
       completedLevels: {},
-      settings: { musicVolume: 0.4, sfxVolume: 0.7 }
+      settings: { musicVolume: 0.2, sfxVolume: 0.7, sfxEnabled: true }
     };
   }
 }
+
+StorageManager.VK_CHUNK_SIZE = 3500;
+StorageManager.VK_CHUNK_COUNT = 8;
+StorageManager._cache = null;
+StorageManager._vkBridge = null;
+StorageManager._vkReady = false;

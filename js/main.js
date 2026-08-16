@@ -2,38 +2,14 @@
  * main.js — точка входа, игровой цикл, управление состоянием
  */
 
-// Обучение
-var TUTORIALS = {
-  welcome: {
-    title: 'Добро пожаловать!',
-    text: 'Нажимай на хомяков, чтобы они двигались.\nПроведи всех хомяков к выходу — и уровень пройден!',
-    firstLevel: 1
-  },
-  straight: {
-    title: 'Трубы',
-    text: 'Прямые трубы можно вращать!\nНажми на трубу, чтобы изменить её направление.',
-    firstLevel: 5
-  },
-  corner: {
-    title: 'Угловые трубы',
-    text: 'Угловые трубы соединяют соседние стороны клетки.\nХомяк поворачивает, проходя через такую трубу!',
-    firstLevel: 11
-  },
-  teleport: {
-    title: 'Порталы',
-    text: 'Порталы мгновенно перемещают хомяка\nк парному порталу в другом месте поля!',
-    firstLevel: 31
-  },
-  timer: {
-    title: 'Таймер',
-    text: 'На уровнях с таймером нужно успеть\nза отведённое время! Следи за часами!',
-    firstLevel: 61
-  },
-  hints: {
-    title: 'Подсказки',
-    text: 'Если не знаешь кого двигать — нажми на лупу.\nПодсказка подсветит хомяка, который может сделать ход!',
-    firstLevel: 2
-  }
+// Обучение — тексты в locales.js (tut*Title / tut*Text)
+var TUTORIAL_IDS = {
+  welcome: true,
+  straight: true,
+  corner: true,
+  teleport: true,
+  timer: true,
+  hints: true
 };
 
 var TUTORIAL_IMAGES = {
@@ -293,7 +269,12 @@ class Game {
     this._centerTick = null;
     this._vkBridge = null;
     this._adLevelCounter = 0;
+    this._pendingInterstitial = false;
     this._levelFailCounts = {};
+    this._platformPaused = false;
+    this._pausedForAd = false;
+    this._appStarted = false;
+    this._graReady = false;
     this._musicEnabled = true;
     this._menuBgImage = new Image();
     this._menuBgImage.src = 'assets/Background.webp';
@@ -301,17 +282,14 @@ class Game {
 
     // Sound
     this.sound = new SoundManager();
-    try {
-      var sData = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY));
-      if (sData && sData.music === false) {
-        this.sound.toggle();
-      }
-    } catch(e) {}
+    this.sound.setMusicVolume(this.storage.settings.musicVolume);
+    this.sound.setSfxEnabled(this.storage.settings.sfxEnabled !== false && this.storage.music !== false);
 
     // Tutorial
     this._tutorialShown = this.storage.tutorials || {};
     this._tutorialQueue = [];
     this._pendingLevelId = null;
+    this._currentTutorialId = null;
 
     var self = this;
     this._resize();
@@ -319,17 +297,31 @@ class Game {
     window.addEventListener('orientationchange', function() { self._scheduleResize(); });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', function() { self._scheduleResize(); });
-      window.visualViewport.addEventListener('scroll', function() { self._scheduleResize(); });
     }
-
     this.input = new InputHandler(this.canvas, this.renderer, function(r, c) { self._onTileTap(r, c); });
 
     window.addEventListener('keydown', function(e) {
       if (e.ctrlKey && e.key === 'z') { e.preventDefault(); self.undo(); }
     });
+    document.addEventListener('visibilitychange', function() {
+      self._setPlatformPaused(document.hidden);
+    });
+    window.addEventListener('pagehide', function() { self._setPlatformPaused(true); });
+    window.addEventListener('pageshow', function() { self._setPlatformPaused(document.hidden); });
 
-    this._showMenu();
     this._loop(0);
+  }
+
+  _tryStartApp() {
+    if (this._appStarted || !this._graReady || this._platformPaused || this._pausedForAd) return;
+    this._startApp();
+  }
+
+  _startApp() {
+    if (this._appStarted) return;
+    this._appStarted = true;
+    if (document.body) document.body.classList.remove('loading');
+    this._showMenu();
   }
 
   _loop(timestamp) {
@@ -421,6 +413,7 @@ class Game {
       this._bgIndex = Math.floor((cfg.id - 1) / 10);
       this.renderer.setBackgroundIndex(this._bgIndex);
       this.state = 'playing';
+      this._gameplayStart();
       this._startTimer();
       this._updateUIForGame();
     } catch (e) { console.error('_startLevel failed:', e); this.state = 'menu'; }
@@ -645,7 +638,7 @@ class Game {
     if (this.hintsRemaining <= 0) {
       // Show popup asking to watch ad (always, even without SDK)
       document.getElementById('hint-ad-screen').classList.remove('hidden');
-      // Hide "Да" button if no ad SDK is available
+      // Hide "Да" button if no SDK available
       var yesBtn = document.getElementById('btn-hint-ad-yes');
       if (!this._vkBridge) {
         yesBtn.classList.add('hidden');
@@ -674,31 +667,28 @@ class Game {
   }
 
   _syncLeaderboard() {
-    // VK Bridge leaderboard receives the current result when the leaderboard is opened.
+    this._leaderboardScore = this._calcTotalStars();
   }
 
   _openLeaderboard() {
-    var stars = this._calcTotalStars();
-    if (this._vkBridge) {
-      this._vkBridge.send('VKWebAppShowLeaderBoardBox', { user_result: stars })
-        .then((data) => {
-          if (!data || data.success === false) this._showLocalLeaderboard();
-        })
-        .catch((err) => {
-          console.error('VK leaderboard error:', err);
-          this._showLocalLeaderboard();
+    this._syncLeaderboard();
+    if (this._vkBridge && typeof this._vkBridge.send === 'function') {
+      var score = this._leaderboardScore || 0;
+      try {
+        this._vkBridge.send('VKWebAppShowLeaderBoardBox', { user_result: score }).catch(function(e) {
+          console.error('VK leaderboard error:', e);
         });
-      return;
+        return;
+      } catch(e) {
+        console.error('VK leaderboard error:', e);
+      }
     }
-    this._showLocalLeaderboard();
-  }
-
-  _showLocalLeaderboard() {
     document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
     document.getElementById('leaderboard-screen').classList.remove('hidden');
     this.sound.play('Menu');
-    this._updateLeaderboardPlayer();
-    document.getElementById('leader-entries').innerHTML = '<div class="leader-no-data">' + _('leaderNoData') + '</div>';
+    var self = this;
+    self._updateLeaderboardPlayer();
+    document.getElementById('leader-entries').innerHTML = '';
   }
 
   _updateLeaderboardPlayer() {
@@ -715,97 +705,65 @@ class Game {
     return d.innerHTML;
   }
 
-  _getVkPlatform() {
-    if (this._vkPlatform != null) return this._vkPlatform;
-    try {
-      var search = window.location.search || '';
-      var match = search.match(/[?&]vk_platform=([^&]+)/);
-      this._vkPlatform = match ? decodeURIComponent(match[1]) : '';
-    } catch (e) {
-      this._vkPlatform = '';
+  _gameplayStart() {}
+
+  _gameplayStop() {}
+
+  _setPlatformPaused(paused) {
+    this._platformPaused = !!paused;
+    if (this._platformPaused) {
+      this._stopTimer();
+      this.sound.pauseAll('platform');
+    } else if (!this._pausedForAd) {
+      if (this.state === 'playing') this._resumeTimer();
+      this.sound.resumeAll('platform');
+      this.sound.tryAutoUnlock();
+      this._tryStartApp();
     }
-    return this._vkPlatform;
   }
 
-  _isDesktopVk() {
-    var platform = this._getVkPlatform();
-    if (platform.indexOf('desktop') === 0) return true;
-    if (platform === 'web_external') return true;
-    if (!platform && (window.innerWidth || 0) > 720) return true;
-    return false;
+  _pauseForAd() {
+    this._pausedForAd = true;
+    this._stopTimer();
+    this.sound.pauseAll('ad');
+    this._gameplayStop();
   }
 
-  _preloadVkAds() {
-    if (!this._vkBridge) return;
-    var bridge = this._vkBridge;
-    ['interstitial', 'reward'].forEach(function(fmt) {
-      bridge.send('VKWebAppCheckNativeAds', { ad_format: fmt }).catch(function() {});
-    });
-    bridge.send('VKWebAppCheckBannerAd').catch(function() {});
-  }
-
-  _showVkBannerAd(onSuccess, onError) {
-    if (!this._vkBridge) {
-      if (onError) onError(new Error('No VK Bridge'));
-      return;
-    }
-    this._vkBridge.send('VKWebAppShowBannerAd', {
-      banner_location: 'bottom',
-      layout_type: 'resize',
-      orientation: 'horizontal'
-    })
-      .then(function(data) {
-        if (!data || data.result === false) throw new Error('Banner ad was not shown');
-        if (onSuccess) onSuccess(data);
-      })
-      .catch(function(err) {
-        console.error('VK banner ad error:', err);
-        if (onError) onError(err);
-      });
-  }
-
-  _showVkAd(adFormat, onSuccess, onLocalFallback, onError) {
-    if (!this._vkBridge) {
-      if (onLocalFallback) onLocalFallback();
-      return;
-    }
+  _resumeAfterAd() {
+    this._pausedForAd = false;
+    this._tryResumeAfterAd(true);
     var self = this;
-    var showParams = { ad_format: adFormat };
-    if (adFormat === 'reward') showParams.use_waterfall = true;
+    setTimeout(function() { self._tryResumeAfterAd(true); }, 250);
+  }
 
-    function onShowResult(data) {
-      if (data && data.result === false) {
-        return Promise.reject(new Error('VK ad was not shown: ' + adFormat));
-      }
-      if (onSuccess) onSuccess(data);
+  _tryResumeAfterAd(force) {
+    if (this._pausedForAd) return;
+    this._platformPaused = force ? false : !!document.hidden;
+    if (!this._platformPaused) {
+      if (this.state === 'playing') this._resumeTimer();
+      this.sound.resumeAll('ad');
+      if (this.state === 'playing') this._gameplayStart();
     }
+  }
 
-    function showNative(params) {
-      return self._vkBridge.send('VKWebAppShowNativeAds', params || showParams).then(onShowResult);
-    }
-
-    function fallbackAfterNativeFail(err) {
-      if (self._isDesktopVk() && adFormat === 'interstitial') {
-        return self._showVkBannerAd(onSuccess, function() {
-          if (onError) onError(err);
-        });
-      }
-      if (self._isDesktopVk() && adFormat === 'reward') {
-        return showNative({ ad_format: 'interstitial' }).catch(function() {
-          if (onError) onError(err);
-        });
-      }
-      if (onError) onError(err);
-    }
-
-    // CheckNativeAds only reflects preload; always attempt ShowNativeAds afterward.
-    this._vkBridge.send('VKWebAppCheckNativeAds', { ad_format: adFormat })
-      .catch(function() { return null; })
-      .then(function() { return showNative(); })
-      .catch(function(err) {
-        console.error('VK ad error:', adFormat, err);
-        return fallbackAfterNativeFail(err);
+  _showVkNativeAd(adFormat) {
+    if (!this._vkBridge || typeof this._vkBridge.send !== 'function') return Promise.resolve(false);
+    var self = this;
+    self._pauseForAd();
+    return self._vkBridge.send('VKWebAppCheckNativeAds', { ad_format: adFormat }).then(function(check) {
+      if (!check || check.result !== true) return false;
+      var payload = { ad_format: adFormat };
+      if (adFormat === 'reward') payload.use_waterfall = true;
+      return self._vkBridge.send('VKWebAppShowNativeAds', payload).then(function(result) {
+        return !!(result && result.result === true);
       });
+    }).catch(function(err) {
+      console.error('VK ad error:', err);
+      return false;
+    }).then(function(wasShown) {
+      self._resumeAfterAd();
+      return wasShown;
+    });
   }
 
  _showRewardedAd() {
@@ -814,8 +772,9 @@ class Game {
       return;
     }
 
-    this._showVkAd('reward', () => {
-      this._returnToLevelAfterSoftlock();
+    var self = this;
+    this._showVkNativeAd('reward').then(function(rewarded) {
+      if (rewarded) self._returnToLevelAfterSoftlock();
     });
 }
 
@@ -838,14 +797,16 @@ class Game {
       document.getElementById('hint-ad-screen')?.classList.add('hidden');
       return;
     }
-    this._showVkAd('reward', () => {
-      this.hintsRemaining += 3;
+    var self = this;
+    this._showVkNativeAd('reward').then(function(rewarded) {
+      if (!rewarded) return;
+      self.hintsRemaining += 3;
 
-      document.getElementById('hint-ad-screen')?.classList.add('hidden');
+      document.getElementById('hint-ad-screen')?.classList.add('hidden'); 
       document.getElementById('game-hud').classList.remove('hidden');
 
-      this.state = 'playing';
-      this._updateUIForGame();
+      self.state = 'playing';
+      self._updateUIForGame();
     });
 }
 
@@ -858,8 +819,9 @@ class Game {
       return;
     }
 
-    this._showVkAd('reward', () => {
-      this._skipCurrentLevel();
+    var self = this;
+    this._showVkNativeAd('reward').then(function(rewarded) {
+      if (rewarded) self._skipCurrentLevel();
     });
   }
 
@@ -871,6 +833,7 @@ class Game {
     StorageManager.markSkipped(levelId);
     this._levelFailCounts[levelId] = 0;
     this._adLevelCounter = 0;
+    this._pendingInterstitial = false;
 
     document.getElementById('softlock-screen')?.classList.add('hidden');
     document.getElementById('game-hud').classList.remove('hidden');
@@ -881,44 +844,70 @@ class Game {
   }
 
   _showInterstitial(callback) {
+    var self = this;
     if (!this._vkBridge) { if (callback) callback(); return; }
-    this._showVkAd('interstitial', function() {
+    this._showVkNativeAd('interstitial').then(function() {
       if (callback) callback();
-    }, null, function() {
-      if (callback) callback();
+      self._resumeMusicAfterAd();
+    });
+  }
+
+  _resumeMusicAfterAd() {
+    this.sound.forceResume();
+    if (this.state === 'playing') {
+      if (!this.sound.ensureMusic(false)) this.sound.playRandomGameMusic();
+    } else if (this.state === 'menu' || this.state === 'levelSelect') {
+      this.sound.startMenuMusic();
+    }
+  }
+
+  _showInterstitialBeforeNext(callback) {
+    if (!this._pendingInterstitial) {
+      callback();
+      return;
+    }
+    this._pendingInterstitial = false;
+    var self = this;
+    this._showInterstitial(function() {
+      callback();
+      setTimeout(function() { self._resumeMusicAfterAd(); }, 300);
     });
   }
 
   _showSettings() {
     document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
     document.getElementById('settings-screen').classList.remove('hidden');
-    // Update music button text
+    // Update sound button text
     var musicBtn = document.getElementById('btn-music-toggle');
-    var enabled = this.sound.isEnabled();
+    var enabled = this.sound.isSfxEnabled();
     musicBtn.textContent = enabled ? _('musicOn') : _('musicOff');
     musicBtn.style.background = enabled ? 'rgba(5,150,105,0.5)' : '';
+    var musicSlider = document.getElementById('music-volume-slider');
+    if (musicSlider) musicSlider.value = this.sound.getMusicVolume();
     // Highlight current language
     document.getElementById('btn-lang-ru').classList.toggle('active', currentLang === 'ru');
     document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
   }
 
   _toggleMusic() {
-    var enabled = this.sound.toggle();
+    var enabled = this.sound.toggleSfx();
     var musicBtn = document.getElementById('btn-music-toggle');
     musicBtn.textContent = enabled ? _('musicOn') : _('musicOff');
     musicBtn.style.background = enabled ? 'rgba(5,150,105,0.5)' : '';
-    if (enabled) {
-      if (this.state === 'playing' || this.state === 'win' || this.state === 'softlock') {
-        this.sound.playRandomGameMusic();
-      } else {
-        this.sound.play('Menu');
-      }
-    }
     try {
-      var data = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY));
-      if (!data) data = {};
-      data.music = enabled;
-      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
+      var data = StorageManager.load();
+      data.settings.sfxEnabled = enabled;
+      delete data.music;
+      StorageManager.save(data);
+    } catch(e) {}
+  }
+
+  _setMusicVolume(volume) {
+    this.sound.setMusicVolume(volume);
+    try {
+      var data = StorageManager.load();
+      data.settings.musicVolume = this.sound.getMusicVolume();
+      StorageManager.save(data);
     } catch(e) {}
   }
 
@@ -935,6 +924,7 @@ class Game {
     if (this.state === 'win') return;
     this.state = 'win';
     this._stopTimer();
+    this._gameplayStop();
     this.sound.play('Win');
     var levelId = this.currentLevelId;
     this._levelFailCounts[levelId] = 0;
@@ -943,7 +933,7 @@ class Game {
       this._adLevelCounter++;
       if (this._adLevelCounter >= 2 && this._vkBridge) {
         this._adLevelCounter = 0;
-        this._showInterstitial();
+        this._pendingInterstitial = true;
       }
     }
     var result = StorageManager.markCompleted(levelId, this.moves, this.lives);
@@ -968,6 +958,7 @@ class Game {
     this._levelFailCounts[levelId] = (this._levelFailCounts[levelId] || 0) + 1;
     document.getElementById('hud-timer').classList.add('hidden');
     this._stopTimer();
+    this._gameplayStop();
     this.sound.play('Los');
     var titleEl = document.querySelector('#softlock-screen h2');
     if (titleEl) titleEl.textContent = this._timerExpired ? _('timeUpTitle') : _('softlockTitle');
@@ -986,12 +977,13 @@ class Game {
   _showMenu() {
     this.state = 'menu';
     this._stopTimer();
+    this._gameplayStop();
     document.getElementById('hud-timer').classList.add('hidden');
     document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
     document.getElementById('game-hud').classList.add('hidden');
     document.getElementById('main-menu').classList.remove('hidden');
     this._drawMenuBg();
-    this.sound.play('Menu');
+    this.sound.startMenuMusic();
   }
 
   _showLevelSelect(targetChapter) {
@@ -999,6 +991,7 @@ class Game {
     document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
     document.getElementById('game-hud').classList.add('hidden');
     document.getElementById('level-select').classList.remove('hidden');
+    this.sound.startMenuMusic();
 
     var carousel = document.getElementById('chapters-carousel');
     carousel.innerHTML = '';
@@ -1161,7 +1154,10 @@ class Game {
 
   _drawMenuBg() {
     var ctx = this.renderer.ctx;
-    var w = this.renderer.viewWidth(), h = this.renderer.viewHeight();
+    var dpr = this.renderer.dpr || 1;
+    var w = this.renderer.viewportWidth || this.canvas.width;
+    var h = this.renderer.viewportHeight || this.canvas.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     if (this._menuBgImage && this._menuBgImage.complete && this._menuBgImage.naturalWidth > 0) {
       try { ctx.drawImage(this._menuBgImage, 0, 0, w, h); } catch(e) {}
@@ -1174,56 +1170,6 @@ class Game {
   }
 
 
-
-  _getSelectCardMetrics(cardEl) {
-    var rect = cardEl ? cardEl.getBoundingClientRect() : null;
-    var w = rect && rect.width ? Math.round(rect.width) : 304;
-    var h = rect && rect.height ? Math.round(rect.height) : 436;
-    var isMobile = CONFIG.isMobileViewport();
-    var dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
-    return { w: w, h: h, dpr: dpr };
-  }
-
-  _paintLevelCardBackgrounds(bgCanvases, chapterIdx, sampleCard) {
-    if (!bgCanvases.length) return;
-    var metrics = this._getSelectCardMetrics(sampleCard);
-    var cardW = metrics.w;
-    var cardH = metrics.h;
-    var dpr = metrics.dpr;
-    var img = new Image();
-    img.onload = function() {
-      var sliceW = img.width / 10;
-      for (var i = 0; i < bgCanvases.length; i++) {
-        var canvas = bgCanvases[i];
-        var sliceIdx = parseInt(canvas.dataset.sliceIdx, 10);
-        canvas.width = Math.round(cardW * dpr);
-        canvas.height = Math.round(cardH * dpr);
-        var c = canvas.getContext('2d');
-        c.setTransform(dpr, 0, 0, dpr, 0, 0);
-        c.imageSmoothingEnabled = true;
-        if (c.imageSmoothingQuality) c.imageSmoothingQuality = 'high';
-        var scale = Math.max(cardW / sliceW, cardH / img.height);
-        var srcW = cardW / scale;
-        var srcH = cardH / scale;
-        var srcX = sliceIdx * sliceW + (sliceW - srcW) / 2;
-        var srcY = (img.height - srcH) / 2;
-        c.clearRect(0, 0, cardW, cardH);
-        c.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cardW, cardH);
-      }
-    };
-    img.onerror = function() {
-      for (var j = 0; j < bgCanvases.length; j++) {
-        var canvas = bgCanvases[j];
-        canvas.width = Math.round(cardW * dpr);
-        canvas.height = Math.round(cardH * dpr);
-        var ctx = canvas.getContext('2d');
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(0, 0, cardW, cardH);
-      }
-    };
-    img.src = 'assets/Background_' + chapterIdx + '.webp';
-  }
 
   _showLevelsView(chapterIdx) {
     this._currentChapter = chapterIdx;
@@ -1246,6 +1192,8 @@ class Game {
 
       var bgCanvas = document.createElement('canvas');
       bgCanvas.className = 'level-card-bg-canvas';
+      bgCanvas.width = 304;
+      bgCanvas.height = 436;
       var sliceIdx = lvlId - startLevel;
       bgCanvas.dataset.sliceIdx = sliceIdx;
 
@@ -1302,13 +1250,33 @@ class Game {
       });
     });
 
-    // Load chapter background after cards are laid out at their CSS size
-    var self4 = this;
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        self4._paintLevelCardBackgrounds(bgCanvases, chapterIdx, cardEls[0] || null);
-      });
-    });
+    // Load chapter background, slice into 10 vertical columns, cover-fit each onto card
+    var img = new Image();
+    var self = this;
+    img.onload = function() {
+      var sliceW = img.width / 10;
+      var cardW = 304, cardH = 436;
+      for (var i = 0; i < bgCanvases.length; i++) {
+        var sliceIdx = parseInt(bgCanvases[i].dataset.sliceIdx);
+        var c = bgCanvases[i].getContext('2d');
+        // cover-fit: scale so the slice fills the card, crop overflow
+        var scale = Math.max(cardW / sliceW, cardH / img.height);
+        var srcW = cardW / scale;
+        var srcH = cardH / scale;
+        var srcX = sliceIdx * sliceW + (sliceW - srcW) / 2;
+        var srcY = (img.height - srcH) / 2;
+        c.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cardW, cardH);
+      }
+    };
+    img.onerror = function() {
+      // Fallback: fill canvases with a dark color
+      for (var i = 0; i < bgCanvases.length; i++) {
+        var c = bgCanvases[i].getContext('2d');
+        c.fillStyle = '#1a1a2e';
+        c.fillRect(0, 0, bgCanvases[i].width, bgCanvases[i].height);
+      }
+    };
+    img.src = 'assets/Background_' + chapterIdx + '.webp';
 
     // Auto-scroll to current level, or center if all locked/completed
     setTimeout(function() {
@@ -1357,6 +1325,7 @@ class Game {
 
   _showNextTutorial() {
     if (this._tutorialQueue.length === 0) {
+      this._currentTutorialId = null;
       document.getElementById('game-hud').classList.remove('hidden');
       this._startLevel(this._pendingLevelId);
       return;
@@ -1365,15 +1334,35 @@ class Game {
     this._showTutorial(id);
   }
 
+  _refreshDynamicLang() {
+    if (this._currentTutorialId) {
+      document.getElementById('tutorial-title').textContent = _tutorialText(this._currentTutorialId, 'Title');
+      document.getElementById('tutorial-text').textContent = _tutorialText(this._currentTutorialId, 'Text');
+    }
+    var softlock = document.getElementById('softlock-screen');
+    if (softlock && !softlock.classList.contains('hidden')) {
+      var softTitle = softlock.querySelector('h2');
+      if (softTitle) softTitle.textContent = this._timerExpired ? _('timeUpTitle') : _('softlockTitle');
+    }
+    var win = document.getElementById('win-screen');
+    if (win && !win.classList.contains('hidden') && this.currentLevelId) {
+      document.getElementById('win-level-text').textContent = _('winLevel') + ' ' + this.currentLevelId + ' ' + _('winPassed');
+    }
+    var musicBtn = document.getElementById('btn-music-toggle');
+    if (musicBtn && this.sound) {
+      musicBtn.textContent = this.sound.isSfxEnabled() ? _('musicOn') : _('musicOff');
+    }
+  }
+
   _showTutorial(id) {
-    var tut = TUTORIALS[id];
-    if (!tut) return;
+    if (!TUTORIAL_IDS[id]) return;
+    this._currentTutorialId = id;
     this.state = 'tutorial';
     document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
     document.getElementById('game-hud').classList.add('hidden');
     document.getElementById('tutorial-screen').classList.remove('hidden');
-    document.getElementById('tutorial-title').textContent = tut.title;
-    document.getElementById('tutorial-text').textContent = tut.text;
+    document.getElementById('tutorial-title').textContent = _tutorialText(id, 'Title');
+    document.getElementById('tutorial-text').textContent = _tutorialText(id, 'Text');
 
     var canvas = document.getElementById('tutorial-canvas');
     var ctx = canvas.getContext('2d');
@@ -1389,9 +1378,9 @@ class Game {
     // Mark as shown and persist
     this._tutorialShown[id] = true;
     try {
-      var data = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY));
+      var data = StorageManager.load();
       if (data) { data.tutorials = this._tutorialShown;
-        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data)); }
+        StorageManager.save(data); }
     } catch(e) {}
   }
 
@@ -1401,33 +1390,19 @@ class Game {
   }
 
   _resize() {
-    var viewport = window.visualViewport || null;
+    var viewport = window.visualViewport;
     var w = Math.round(viewport ? viewport.width : window.innerWidth);
     var h = Math.round(viewport ? viewport.height : window.innerHeight);
-    var isMobile = CONFIG.isMobileViewport(w, h);
-    var dpr = isMobile ? (window.devicePixelRatio || 1) : 1;
-    if (isMobile) {
-      this.canvas.style.width = '100%';
-      this.canvas.style.height = '100%';
-    } else {
-      this.canvas.style.width = w + 'px';
-      this.canvas.style.height = h + 'px';
-    }
-    var displayW = Math.round(this.canvas.clientWidth) || w;
-    var displayH = Math.round(this.canvas.clientHeight) || h;
-    if (this._canvasWidth === displayW && this._canvasHeight === displayH && this._canvasDpr === dpr) return;
-    this._canvasWidth = displayW;
-    this._canvasHeight = displayH;
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (this._canvasWidth === w && this._canvasHeight === h && this._canvasDpr === dpr) return;
+    this._canvasWidth = w;
+    this._canvasHeight = h;
     this._canvasDpr = dpr;
-    this.canvas.width = Math.round(displayW * dpr);
-    this.canvas.height = Math.round(displayH * dpr);
-    var ctx = this.renderer.ctx;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (dpr > 1) {
-      ctx.imageSmoothingEnabled = true;
-      if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
-    }
-    this.renderer.setViewSize(displayW, displayH, dpr);
+    this.canvas.width = Math.round(w * dpr); this.canvas.height = Math.round(h * dpr);
+    this.canvas.style.width = w + 'px'; this.canvas.style.height = h + 'px';
+    this.canvas._logicalWidth = w;
+    this.canvas._logicalHeight = h;
+    this.renderer.setViewport(w, h, dpr);
     if (this.board) this.renderer.layout(this.board);
   }
 
@@ -1443,12 +1418,14 @@ class Game {
   _showPause() {
     if (this.state !== 'playing') return;
     this._stopTimer();
+    this._gameplayStop();
     this._pauseRemaining = this._timerSeconds;
     document.getElementById('pause-screen').classList.remove('hidden');
   }
 
   _resumeGame() {
     document.getElementById('pause-screen').classList.add('hidden');
+    if (this.state === 'playing') this._gameplayStart();
     if (this._pauseRemaining > 0) {
       this._timerSeconds = this._pauseRemaining;
       this._resumeTimer();
@@ -1463,9 +1440,12 @@ class Game {
   _nextLevel() {
     var nextId = this.currentLevelId + 1;
     if (nextId > this.levelManager.total) return;
-    document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
-    document.getElementById('game-hud').classList.remove('hidden');
-    this._startLevelWithTutorial(nextId);
+    var self = this;
+    this._showInterstitialBeforeNext(function() {
+      document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
+      document.getElementById('game-hud').classList.remove('hidden');
+      self._startLevelWithTutorial(nextId);
+    });
   }
 
   _resetProgress() {
@@ -1476,7 +1456,18 @@ class Game {
 
 var game;
 document.addEventListener('DOMContentLoaded', function() {
+  function startGame() {
   game = new Game();
+  if (typeof finishSdkBootstrap === 'function') {
+    finishSdkBootstrap();
+  } else {
+    try {
+      var langData = StorageManager.load();
+      if (langData && langData.lang && LOCALES[langData.lang]) setLang(langData.lang);
+    } catch(e) {}
+    game._graReady = true;
+    game._startApp();
+  }
   document.getElementById('btn-continue').addEventListener('click', function() {
     var data = StorageManager.load();
     // Найти последний открытый уровень
@@ -1550,7 +1541,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-lang-ru').addEventListener('click', function() { setLang('ru'); document.getElementById('btn-lang-ru').classList.add('active'); document.getElementById('btn-lang-en').classList.remove('active'); });
   document.getElementById('btn-lang-en').addEventListener('click', function() { setLang('en'); document.getElementById('btn-lang-en').classList.add('active'); document.getElementById('btn-lang-ru').classList.remove('active'); });
   document.getElementById('btn-music-toggle').addEventListener('click', function() { game._toggleMusic(); });
+  document.getElementById('music-volume-slider').addEventListener('input', function(e) { game._setMusicVolume(e.target.value); });
   document.getElementById('btn-settings-back').addEventListener('click', function() { game._showMenu(); });
+  document.getElementById('btn-settings-back-mobile').addEventListener('click', function() { game._showMenu(); });
   document.getElementById('btn-tutorial-gotit').addEventListener('click', function() { game._hideTutorial(); });
   document.getElementById('btn-leaderboard').addEventListener('click', function() { game._openLeaderboard(); });
   document.getElementById('btn-leader-back').addEventListener('click', function() { game._showMenu(); });
@@ -1560,30 +1553,96 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-hint-ad-no').addEventListener('click', function() {
     document.getElementById('hint-ad-screen').classList.add('hidden');
   });
-});
-
-// Инициализация VK Bridge
-(function initVkBridge() {
-  if (typeof vkBridge === 'undefined') return;
-
-  // Гарантируем, что Game уже создан (initVkBridge может завершиться раньше DOMContentLoaded)
-  function whenGameReady(cb) {
-    if (typeof game !== 'undefined' && game) { cb(); return; }
-    var tries = 0;
-    var iv = setInterval(function() {
-      if ((typeof game !== 'undefined' && game) || ++tries > 100) {
-        clearInterval(iv);
-        if (typeof game !== 'undefined' && game) cb();
-      }
-    }, 50);
+  document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+  document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+  document.addEventListener('dragstart', function(e) { e.preventDefault(); });
   }
 
-  vkBridge.send('VKWebAppInit').then(function() {
-    whenGameReady(function() {
-      game._vkBridge = vkBridge;
-      game._preloadVkAds();
+  if (typeof window.prepareVkStorage === 'function') {
+    window.prepareVkStorage().then(startGame).catch(function(err) {
+      console.error('VK storage init error:', err);
+      startGame();
     });
+  } else {
+    startGame();
+  }
+});
+
+// Инициализация VK Bridge — язык и SDK до показа UI, локальный запуск остается рабочим.
+(function initVkBridge() {
+  function getVkBridge() {
+    var bridge = window.vkBridge;
+    if (bridge && bridge.default && typeof bridge.default.send === 'function') return bridge.default;
+    if (bridge && typeof bridge.send === 'function') return bridge;
+    return null;
+  }
+
+  function hasVkLaunchParams() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      return !!(params.get('vk_app_id') || params.get('vk_platform') || params.get('sign'));
+    } catch(e) {
+      return false;
+    }
+  }
+
+  var _vkBridgeInstance = getVkBridge();
+  if (!_vkBridgeInstance || !hasVkLaunchParams()) return;
+  var _vkReady = false;
+  var _vkStorageReady = false;
+  var _vkInitPromise = null;
+
+  function normalizeVkLang(rawLang) {
+    var value = (rawLang || '').toLowerCase();
+    return value.indexOf('ru') === 0 ? 'ru' : 'en';
+  }
+
+  function readUrlLang() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      return params.get('vk_language') || params.get('language') || params.get('lang');
+    } catch(e) {
+      return '';
+    }
+  }
+
+  function applyVkLanguage(params) {
+    try {
+      var sdkLang = params && (params.vk_language || params.language || params.lang);
+      setLang(normalizeVkLang(sdkLang || readUrlLang()), false);
+    } catch(e) {}
+  }
+
+  window.finishSdkBootstrap = function() {
+    if (!_vkReady || !_vkStorageReady || typeof game === 'undefined' || !game || game._graReady) return;
+    game._vkBridge = _vkBridgeInstance;
+    game._graReady = true;
+    game._syncLeaderboard();
+    game._tryStartApp();
+  };
+
+  window.prepareVkStorage = function() {
+    if (typeof StorageManager === 'undefined' || typeof StorageManager.initVkStorage !== 'function') {
+      _vkStorageReady = true;
+      return Promise.resolve();
+    }
+    return _vkInitPromise.then(function() {
+      return StorageManager.initVkStorage(_vkBridgeInstance);
+    }).then(function() {
+      _vkStorageReady = true;
+    });
+  };
+
+  _vkInitPromise = _vkBridgeInstance.send('VKWebAppInit').then(function() {
+    return _vkBridgeInstance.send('VKWebAppGetLaunchParams');
+  }).then(function(params) {
+    applyVkLanguage(params);
+    _vkReady = true;
+    finishSdkBootstrap();
   }).catch(function(err) {
     console.error('VK Bridge init error:', err);
+    applyVkLanguage(null);
+    _vkReady = true;
+    finishSdkBootstrap();
   });
 })();

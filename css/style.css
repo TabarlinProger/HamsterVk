@@ -14,7 +14,13 @@ html, body {
   text-shadow: 0 2px 8px rgba(0,0,0,0.9);
   user-select: none;
   -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+@supports (height: 100dvh) {
+  html, body { height: 100dvh; }
 }
 
 #gameCanvas {
@@ -25,6 +31,12 @@ html, body {
 }
 
 img { -webkit-user-drag: none; }
+
+body.loading #gameCanvas,
+body.loading .screen,
+body.loading #game-hud {
+  visibility: hidden;
+}
 
 button, input, select, textarea {
   font-family: inherit;
@@ -266,10 +278,7 @@ button, input, select, textarea {
 
 #hud-hint-count {
   position: absolute;
-  top: calc(50% + 12px);
-  left: calc(50% + 12px + 15px);
-  right: auto;
-  bottom: auto;
+  bottom: 0px; right: 0px;
   font-size: 24px;
   font-weight: 700;
   color: #fff;
@@ -353,7 +362,7 @@ button, input, select, textarea {
 
 /* Each chapter is its own panel/card — glassmorphism panel as base */
 .chapter-slide {
-  flex: 0 0 auto;
+  flex: 0 0 610px;
   width: 610px;
   height: 436px;
   scroll-snap-align: center;
@@ -459,6 +468,7 @@ button, input, select, textarea {
 
 .btn-back:active { transform: scale(0.95); }
 .btn-back img { width: auto; height: 28px; object-fit: contain; }
+.settings-back-mobile { display: none; }
 
 /* Level cards row */
 #levels-grid {
@@ -476,8 +486,7 @@ button, input, select, textarea {
 #levels-grid::-webkit-scrollbar { display: none; }
 
 .level-card {
-  flex: 0 0 auto;
-  width: 304px;
+  flex: 0 0 304px;
   height: 436px;
   scroll-snap-align: center;
   border-radius: 22px;
@@ -585,6 +594,19 @@ button, input, select, textarea {
     border-radius: 19px;
   }
   .btn-icon img { width: 32px; height: 32px; }
+  .btn-pause {
+    width: 100px; height: 100px;
+    border-radius: 32px;
+  }
+  .btn-pause img { width: 53px; height: 53px; }
+  .btn-pause { top: 13px; left: 13px; }
+  #btn-hint {
+    width: 75px; height: 75px;
+    top: 127px; left: 13px;
+    border-radius: 24px;
+  }
+  #btn-hint img { width: 40px; height: 40px; }
+  
   .hud-hearts img { width: 34px; height: 34px; }
   #hud-counter-img { width: 20px; height: 20px; }
   #hud-remaining { font-size: 16px; }
@@ -680,6 +702,21 @@ button, input, select, textarea {
 .lang-btn.active {
   border-color: #60A5FA !important;
   background: rgba(96,165,250,0.2) !important;
+}
+.settings-slider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+}
+.settings-slider span {
+  font-size: 24px;
+  font-weight: 700;
+}
+.settings-slider input {
+  width: min(240px, 52vw);
+  accent-color: #60A5FA;
 }
 /* Leaderboard */
 #leaderboard-screen {
@@ -789,458 +826,197 @@ canvas, img, svg {
   text-shadow: none;
 }
 
-/* ==================== ADAPTIVE LAYOUT ==================== */
+/* ==================== ADAPTIVE OVERRIDES ==================== */
 
-:root {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-right: env(safe-area-inset-right, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left: env(safe-area-inset-left, 0px);
-  --ui-edge: clamp(12px, 2.2vw, 28px);
-  --panel-pad-x: clamp(20px, 4vw, 48px);
-  --panel-pad-y: clamp(24px, 5vh, 48px);
-  --button-font: clamp(18px, 1.8vw, 24px);
-  --button-icon: clamp(28px, 3vw, 40px);
-  --hud-edge: clamp(12px, 1.8vw, 20px);
-}
-
-html,
-body {
-  min-width: 320px;
-}
-
-body {
-  min-height: 100dvh;
-}
-
-#gameCanvas {
-  width: 100vw;
+.screen,
+#game-hud {
   height: 100dvh;
-}
-
-.screen {
-  width: 100vw;
-  height: 100dvh;
-  padding: calc(var(--safe-top) + var(--ui-edge)) calc(var(--safe-right) + var(--ui-edge)) calc(var(--safe-bottom) + var(--ui-edge)) calc(var(--safe-left) + var(--ui-edge));
+  min-height: 0;
 }
 
 .panel,
 .tutorial-panel,
 .leader-panel {
-  width: min(92vw, 560px);
-  max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 32px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: auto;
-  padding: var(--panel-pad-y) var(--panel-pad-x);
-  border-radius: clamp(24px, 4vw, 37px);
-}
-
-.panel h2,
-.tutorial-panel h2,
-.leader-panel h2 {
-  font-size: clamp(28px, 4vw, 40px);
-  line-height: 1.1;
-  text-align: center;
-}
-
-.panel p,
-#tutorial-text {
-  font-size: clamp(16px, 2.2vw, 21px);
 }
 
 .btn {
-  min-width: min(320px, 100%);
-  padding: clamp(14px, 2.4vh, 24px) clamp(24px, 5vw, 59px);
-  gap: clamp(10px, 2vw, 16px);
-  border-radius: clamp(18px, 3vw, 27px);
-  font-size: var(--button-font);
-  min-height: 56px;
+  max-width: calc(100vw - 32px);
 }
 
-.btn-icon,
-.btn-pause,
-#btn-hint {
-  min-width: unset;
-  min-height: unset;
-  padding: 0;
-  gap: 0;
-}
-
-.btn img {
-  width: var(--button-icon);
-  height: var(--button-icon);
-}
-
-.btn-primary {
-  padding: clamp(16px, 2.7vh, 27px) clamp(28px, 6vw, 69px);
-  font-size: clamp(20px, 2vw, 27px);
-}
-
-#btn-levels,
-#btn-leaderboard,
-#btn-settings {
-  margin-top: clamp(16px, 4vh, 37px);
-}
-
-.btn-back {
-  top: calc(var(--safe-top) + var(--ui-edge));
-  left: calc(var(--safe-left) + var(--ui-edge));
-  padding: clamp(10px, 1.8vh, 14px) clamp(16px, 3vw, 28px);
-  font-size: clamp(16px, 2vw, 20px);
-}
-
-.btn-back img {
-  height: clamp(22px, 3vw, 28px);
-}
-
-.btn-pause {
-  top: calc(var(--safe-top) + var(--ui-edge) + 15px);
-  left: calc(var(--safe-left) + var(--hud-edge));
-  width: clamp(76px, 9vw, 96px);
-  height: clamp(76px, 9vw, 96px);
-  border-radius: clamp(24px, 3vw, 32px);
-}
-
-.btn-pause img {
-  width: clamp(48px, 5.6vw, 56px);
-  height: clamp(48px, 5.6vw, 56px);
-}
-
-#btn-hint {
-  top: calc(var(--safe-top) + var(--ui-edge) + clamp(90px, 10vw, 116px));
-  left: calc(var(--safe-left) + var(--hud-edge) + clamp(9px, 1vw, 10px));
-  width: clamp(58px, 7vw, 76px);
-  height: clamp(58px, 7vw, 76px);
-}
-
-#btn-hint img {
-  width: clamp(36px, 4.6vw, 44px);
-  height: clamp(36px, 4.6vw, 44px);
-}
-
-#hud-hint-count {
-  top: calc(50% + clamp(10px, 1.3vw, 14px));
-  left: calc(50% + clamp(8px, 1vw, 12px) + 15px);
-  font-size: clamp(18px, 2.3vw, 24px);
-}
-
-.hud-hearts {
-  top: calc(var(--safe-top) + var(--ui-edge) + clamp(20px, 3.5vw, 50px));
-  right: calc(var(--safe-right) + var(--ui-edge));
-}
-
-.hud-hearts img {
-  width: clamp(32px, 4.2vw, 51px);
-  height: clamp(32px, 4.2vw, 51px);
-}
-
-.hud-counter {
-  top: calc(var(--safe-top) + var(--ui-edge) + clamp(74px, 9vw, 129px));
-  right: calc(var(--safe-right) + var(--ui-edge));
-}
-
-#hud-counter-img {
-  width: clamp(28px, 4vw, 48px);
-  height: clamp(28px, 4vw, 48px);
-}
-
-#hud-remaining {
-  font-size: clamp(22px, 3vw, 36px);
-}
-
-.hud-timer {
-  top: calc(var(--safe-top) + var(--ui-edge) + clamp(116px, 13vw, 181px));
-  right: calc(var(--safe-right) + var(--ui-edge));
-}
-
-#hud-time {
-  font-size: clamp(32px, 5vw, 60px);
-}
-
-#win-stars img {
-  width: clamp(48px, 7vw, 69px);
-  height: clamp(48px, 7vw, 69px);
-}
-
-.hint-ad-actions,
-.settings-lang-row,
-.settings-music-row {
-  display: flex;
-  width: 100%;
-  justify-content: center;
-  align-items: center;
-  gap: clamp(10px, 3vw, 16px);
-}
-
-.hint-ad-text {
-  text-align: center;
-}
-
-.hint-ad-choice {
-  min-width: 0;
-  flex: 1;
-  padding: 10px 16px;
-}
-
-.hint-ad-choice img {
-  width: clamp(28px, 7vw, 40px);
-  height: clamp(28px, 7vw, 40px);
-}
-
-.lang-btn {
-  min-width: unset;
-  padding: clamp(6px, 1.5vw, 8px);
-  border-radius: 16px;
-}
-
-.lang-btn img {
-  display: block;
-  width: clamp(56px, 13vw, 80px);
-  height: clamp(56px, 13vw, 80px);
-}
-
-.settings-music-row span {
-  font-size: clamp(20px, 3vw, 24px);
-  font-weight: 700;
-}
-
-#btn-music-toggle {
-  min-width: unset;
-  padding: 14px 28px;
-}
-
-#leaderboard-screen {
-  padding-top: calc(var(--safe-top) + 80px);
-}
-
-.leader-entries {
-  max-height: min(400px, 45dvh);
-}
-
-@media (min-width: 900px) {
-  #main-menu .btn {
-    min-width: 340px;
-  }
-
-  .btn:hover,
-  .btn-back:hover,
-  .chapter-slide:hover,
-  .level-card:hover {
-    transform: translateY(-2px);
-  }
-
-  .chapter-slide.centered:hover,
-  .level-card.centered:hover {
-    transform: scale(1.1) translateY(-2px);
-  }
-}
-
-@media (min-width: 721px) and (min-height: 521px) {
-  .btn-pause {
-    top: 19px;
-    left: 19px;
-    width: 150px;
-    height: 150px;
-    border-radius: 48px;
-  }
-
-  .btn-pause img {
-    width: 80px;
-    height: 80px;
-  }
-
-  #btn-hint {
-    top: 175px;
-    left: 44px;
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-  }
-
-  #btn-hint img {
-    width: 48px;
-    height: 48px;
-  }
-
-  #hud-hint-count {
-    top: calc(50% + 12px);
-    left: calc(50% + 12px + 15px);
-    font-size: 24px;
-  }
-
-  .hud-hearts {
-    top: 69px;
-    right: 19px;
-  }
-
-  .hud-hearts img {
-    width: 51px;
-    height: 51px;
-  }
-
-  .hud-counter {
-    top: 148px;
-    right: 19px;
-  }
-
-  #hud-counter-img {
-    width: 48px;
-    height: 48px;
-  }
-
-  #hud-remaining {
-    font-size: 36px;
-  }
-
-  .hud-timer {
-    top: calc(var(--safe-top) + var(--ui-edge) + 181px);
-  }
-
-  #hud-time {
-    font-size: 60px;
-  }
-
-  #chapters-carousel {
-    gap: 48px;
-    padding: 24px max(24px, calc(50% - 305px));
-  }
-
-  .chapter-slide {
-    flex: 0 0 610px;
-    width: 610px;
-    height: 436px;
-    max-height: none;
-  }
-
-  .chapter-slide-title {
-    font-size: 30px;
-  }
-
-  .chapter-slide-subtitle {
-    font-size: 16px;
-  }
-
-  #levels-grid {
-    gap: 32px;
-    padding: 80px max(24px, calc(50% - 152px)) 40px;
-  }
-
-  .level-card {
-    flex: 0 0 304px;
-    width: 304px;
-    height: 436px;
-    max-height: none;
-    padding: 20px;
-  }
-
-  .level-card-title {
-    font-size: 26px;
-  }
-
-  .level-card-stars img {
-    width: 26px;
-    height: 26px;
-  }
-
-  .chapter-slide.centered,
-  .level-card.centered {
-    transform: scale(1.1);
-  }
-
-  .tutorial-panel {
-    max-width: 533px;
-    width: 90%;
-  }
-
-  .tutorial-visual-wrap {
-    width: 240px;
-    height: 160px;
-  }
-
-  #main-menu {
-    justify-content: center;
-    padding-bottom: 0;
-  }
-
-  .panel,
-  .tutorial-panel,
-  .leader-panel {
-    width: min(92vw, 560px);
-  }
-}
-
-@media (max-width: 720px), ((max-height: 520px) and (max-width: 900px)) {
-  html,
-  body,
-  body *:not(canvas):not(img):not(svg):not(path) {
-    -webkit-text-stroke: 1.4px #000;
+@media (max-width: 700px), (max-height: 560px) {
+  body, body *:not(canvas):not(img):not(svg):not(path) {
+    -webkit-text-stroke: 1.5px #000;
   }
 
   .screen {
-    justify-content: center;
-  }
-
-  #main-menu {
-    justify-content: flex-end;
-    padding-bottom: calc(var(--safe-bottom) + 7vh);
-  }
-
-  #main-menu .btn {
-    width: min(86vw, 340px);
+    padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
   }
 
   .panel,
-  .tutorial-panel,
-  .leader-panel {
-    width: min(92vw, 420px);
+  .tutorial-panel {
+    width: min(92vw, 430px);
+    padding: 24px 20px;
+    gap: 14px;
+    border-radius: 24px;
+  }
+
+  .panel h2,
+  .tutorial-panel h2,
+  .leader-panel h2 {
+    font-size: clamp(26px, 7vw, 34px);
+    text-align: center;
+    line-height: 1.12;
+  }
+
+  .panel p,
+  #tutorial-text {
+    font-size: clamp(15px, 4.2vw, 18px);
+    line-height: 1.35;
+  }
+
+  .btn {
+    width: min(100%, 320px);
+    min-width: 0;
+    min-height: 54px;
+    padding: 14px 20px;
+    gap: 10px;
+    border-radius: 18px;
+    font-size: clamp(17px, 4.7vw, 21px);
+    letter-spacing: 0;
+  }
+
+  .btn img,
+  #leaderboard-img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .btn-primary {
+    padding: 16px 22px;
+    font-size: clamp(18px, 5vw, 22px);
+  }
+
+  #btn-levels,
+  #btn-leaderboard,
+  #btn-settings {
+    margin-top: 18px;
+  }
+
+  .btn-back {
+    top: calc(10px + env(safe-area-inset-top));
+    left: calc(10px + env(safe-area-inset-left));
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 17px;
+    gap: 6px;
+  }
+
+  .btn-back img {
+    height: 22px;
+  }
+
+  .btn-pause {
+    top: calc(8px + env(safe-area-inset-top));
+    left: calc(8px + env(safe-area-inset-left));
+    width: clamp(68px, 18vw, 92px);
+    height: clamp(68px, 18vw, 92px);
+    border-radius: 24px;
+  }
+
+  .btn-pause img {
+    width: clamp(38px, 10vw, 52px);
+    height: clamp(38px, 10vw, 52px);
+  }
+
+  #btn-hint {
+    top: calc(86px + env(safe-area-inset-top));
+    left: calc(10px + env(safe-area-inset-left));
+    width: clamp(58px, 15vw, 74px);
+    height: clamp(58px, 15vw, 74px);
+  }
+
+  #btn-hint img {
+    width: clamp(34px, 9vw, 42px);
+    height: clamp(34px, 9vw, 42px);
+  }
+
+  #hud-hint-count {
+    font-size: clamp(17px, 4.8vw, 22px);
+  }
+
+  .hud-hearts {
+    top: calc(18px + env(safe-area-inset-top));
+    right: calc(10px + env(safe-area-inset-right));
+    gap: 3px;
+  }
+
+  .hud-hearts img {
+    width: clamp(28px, 8.5vw, 38px);
+    height: clamp(28px, 8.5vw, 38px);
+  }
+
+  .hud-counter {
+    top: calc(58px + env(safe-area-inset-top));
+    right: calc(12px + env(safe-area-inset-right));
+    gap: 5px;
+  }
+
+  #hud-counter-img {
+    width: clamp(24px, 7vw, 34px);
+    height: clamp(24px, 7vw, 34px);
+  }
+
+  #hud-remaining {
+    font-size: clamp(20px, 6vw, 28px);
+  }
+
+  .hud-timer {
+    top: calc(92px + env(safe-area-inset-top));
+    right: calc(12px + env(safe-area-inset-right));
+  }
+
+  #hud-time {
+    font-size: clamp(30px, 9vw, 44px);
+  }
+
+  #chapters-carousel {
+    gap: 20px;
+    padding: 72px max(16px, calc(50% - min(42vw, 230px))) 32px;
+  }
+
+  .chapter-slide {
+    flex-basis: min(84vw, 460px);
+    width: min(84vw, 460px);
+    height: min(60vw, 320px);
+    min-height: 220px;
+    border-radius: 20px;
   }
 
   .chapter-slide.centered,
   .level-card.centered {
-    transform: scale(1.08);
+    transform: scale(1.04);
   }
 
-  #level-select {
-    justify-content: center;
-    padding-top: calc(var(--safe-top) + 52px);
-    padding-bottom: calc(var(--safe-bottom) + 12px);
+  .chapter-slide-title {
+    font-size: clamp(23px, 6vw, 30px);
   }
 
-  #chapters-carousel {
-    gap: 14px;
-    width: 100%;
-    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 64px);
-    padding-left: max(calc(50% - 22vw), calc(var(--safe-left) + var(--ui-edge)));
-    padding-right: max(calc(50% - 22vw), calc(var(--safe-right) + var(--ui-edge)));
-  }
-
-  .chapter-slide {
-    flex: 0 0 44vw;
-    width: 44vw;
-    height: min(calc(44vw * 436 / 610), calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px));
-    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px);
-    border-radius: 20px;
-  }
-
-  #levels-view {
-    padding-top: calc(var(--safe-top) + 8px);
-    padding-bottom: calc(var(--safe-bottom) + 8px);
+  .chapter-slide-subtitle {
+    font-size: clamp(14px, 3.7vw, 17px);
   }
 
   #levels-grid {
-    gap: 14px;
-    width: 100%;
-    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 48px);
-    padding-top: calc(var(--safe-top) + 52px);
-    padding-bottom: calc(var(--safe-bottom) + 20px);
-    padding-left: max(calc(50% - 17vw), calc(var(--safe-left) + var(--ui-edge)));
-    padding-right: max(calc(50% - 17vw), calc(var(--safe-right) + var(--ui-edge)));
+    gap: 18px;
+    padding: 72px max(16px, calc(50% - min(37vw, 132px))) 28px;
   }
 
   .level-card {
-    flex: 0 0 34vw;
-    width: 34vw;
-    height: min(calc(34vw * 436 / 304), calc(100dvh - var(--safe-top) - var(--safe-bottom) - 88px));
-    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 88px);
+    flex-basis: min(74vw, 264px);
+    height: min(105vw, 380px);
+    min-height: 300px;
+    padding: 16px;
     border-radius: 18px;
   }
 
@@ -1248,200 +1024,186 @@ body {
     border-radius: 18px;
   }
 
+  .level-card-content {
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+
   .level-card-title {
-    font-size: clamp(18px, 4.8vw, 24px);
+    font-size: clamp(21px, 5.8vw, 25px);
   }
 
   .level-card-stars img {
-    width: clamp(20px, 5vw, 24px);
-    height: clamp(20px, 5vw, 24px);
-  }
-
-  .chapter-slide-title {
-    font-size: clamp(24px, 6.5vw, 30px);
-  }
-
-  .chapter-slide-subtitle {
-    font-size: clamp(15px, 4vw, 17px);
-  }
-
-  #level-select .btn-back {
-    top: calc(var(--safe-top) + var(--ui-edge));
-    left: calc(var(--safe-left) + var(--ui-edge));
-  }
-
-  .tutorial-panel,
-  #hint-ad-screen .panel {
-    width: min(74vw, 336px);
-    padding: clamp(16px, 3vh, 24px) clamp(16px, 4vw, 24px);
-    gap: clamp(10px, 2vh, 16px);
-  }
-
-  .tutorial-panel h2,
-  #hint-ad-screen .panel h2 {
-    font-size: clamp(22px, 5vw, 32px);
+    width: 23px;
+    height: 23px;
   }
 
   .tutorial-visual-wrap {
-    width: min(160px, 40vw);
-    height: min(107px, 27vw);
+    width: min(58vw, 220px);
+    height: min(38vw, 148px);
   }
 
-  #tutorial-text,
-  #hint-ad-screen .hint-ad-text {
-    font-size: clamp(14px, 3.6vw, 17px);
-  }
-
-  #hint-ad-screen .hint-ad-choice {
-    padding: 8px 14px;
-  }
-
-  .hint-ad-actions {
-    flex-direction: column-reverse;
-  }
-
-  .hint-ad-choice {
+  #tutorial-canvas {
     width: 100%;
+    height: 100%;
   }
 
-  .settings-music-row {
-    flex-direction: column;
+  #leaderboard-screen {
+    justify-content: flex-start;
+    padding-top: calc(62px + env(safe-area-inset-top));
   }
 
-  .btn-pause {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
+  .leader-panel {
+    width: min(92vw, 460px);
+    padding: 22px 16px;
+    border-radius: 24px;
   }
 
-  .btn-pause img {
-    width: 32px;
-    height: 32px;
+  .leader-entries {
+    max-height: calc(100dvh - 260px);
   }
 
-  #btn-hint {
-    top: calc(var(--safe-top) + var(--ui-edge) + 15px + 52px);
-    left: calc(var(--safe-left) + var(--hud-edge));
-    width: 44px;
-    height: 44px;
+  .leader-row,
+  .leader-player {
+    padding: 8px 10px;
+    gap: 6px;
   }
 
-  #btn-hint img {
+  .leader-rank {
     width: 28px;
-    height: 28px;
+    font-size: 16px;
   }
 
-  #hud-hint-count {
-    top: calc(50% + 8px);
-    left: calc(50% + 8px + 10px);
-    font-size: 14px;
-  }
-
-  .hud-counter {
-    top: calc(var(--safe-top) + var(--ui-edge) + clamp(74px, 9vw, 129px) + 20px);
+  .leader-name,
+  .leader-score {
+    font-size: 15px;
   }
 }
 
-@media (max-width: 420px) {
-  :root {
-    --ui-edge: 10px;
-  }
-
-  .btn {
-    width: min(88vw, 320px);
-  }
-
-  .btn-back span {
+@media (max-width: 700px), (max-width: 1000px) and (max-height: 500px) {
+  #btn-settings-back {
     display: none;
   }
 
-  .btn-back {
-    padding: 10px 12px;
+  .settings-back-mobile {
+    display: inline-flex;
   }
 
-  .hud-hearts {
-    gap: 2px;
-  }
-
-  .leader-panel {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-}
-
-@media (max-height: 620px) {
-  .panel,
-  .tutorial-panel,
-  .leader-panel {
-    gap: 12px;
-    padding-top: 18px;
-    padding-bottom: 18px;
-  }
-
-  #main-menu {
-    justify-content: center;
-  }
-
-  #btn-levels,
-  #btn-leaderboard,
-  #btn-settings {
-    margin-top: 12px;
-  }
-
-  .btn {
-    min-height: 48px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-  }
-
-  .tutorial-visual-wrap {
-    width: min(210px, 48vw);
-    height: min(140px, 28vh);
-  }
-}
-
-@media (orientation: landscape) and (max-height: 520px) {
-  #main-menu {
-    justify-content: center;
-  }
-
-  .btn-pause {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-  }
-
-  .btn-pause img {
-    width: 28px;
-    height: 28px;
-  }
-
-  #btn-hint {
-    top: calc(var(--safe-top) + var(--ui-edge) + 15px + 48px);
-    left: calc(var(--safe-left) + var(--hud-edge));
-    width: 40px;
-    height: 40px;
-  }
-
-  #btn-hint img {
-    width: 26px;
-    height: 26px;
+  #hud-hint-count {
+    font-size: clamp(13.6px, 3.84vw, 17.6px);
   }
 
   .hud-hearts img {
-    width: 28px;
-    height: 28px;
+    width: clamp(19.6px, 5.95vw, 26.6px);
+    height: clamp(19.6px, 5.95vw, 26.6px);
   }
 
-  .hud-counter {
-    top: calc(var(--safe-top) + var(--ui-edge) + 48px + 20px);
+  #hud-counter-img {
+    width: clamp(16.8px, 4.9vw, 23.8px);
+    height: clamp(16.8px, 4.9vw, 23.8px);
   }
 
-  .hud-timer {
-    top: calc(var(--safe-top) + var(--ui-edge) + 82px);
+  #hud-remaining {
+    font-size: clamp(14px, 4.2vw, 19.6px);
   }
 
-  #hud-time {
-    font-size: 28px;
+  .level-card-title {
+    font-size: clamp(16.8px, 4.64vw, 20px);
+  }
+
+  .tutorial-panel {
+    scale: 0.85;
+  }
+
+  #settings-screen .panel {
+    scale: 0.8;
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  .screen {
+    justify-content: center;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .panel,
+  .tutorial-panel {
+    gap: 10px;
+    padding: 14px 18px;
+  }
+
+  .panel h2,
+  .tutorial-panel h2,
+  .leader-panel h2 {
+    font-size: 24px;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 9px 16px;
+    font-size: 16px;
+  }
+
+  .btn img,
+  #leaderboard-img {
+    width: 24px;
+    height: 24px;
+  }
+
+  #chapters-carousel,
+  #levels-grid {
+    padding-top: 50px;
+    padding-bottom: 18px;
+  }
+
+  .chapter-slide {
+    flex-basis: min(58vw, 360px);
+    width: min(58vw, 360px);
+    height: min(56vh, 230px);
+    min-height: 170px;
+  }
+
+  .level-card {
+    flex-basis: min(36vw, 220px);
+    height: min(72vh, 300px);
+    min-height: 210px;
+  }
+
+  .btn-pause {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+  }
+
+  .btn-pause img {
+    width: 34px;
+    height: 34px;
+  }
+
+  #btn-hint {
+    top: calc(70px + env(safe-area-inset-top));
+    width: 52px;
+    height: 52px;
+  }
+
+  #btn-hint img {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .panel,
+  .tutorial-panel,
+  .btn,
+  .chapter-slide,
+  .level-card,
+  .hud-hearts img,
+  #win-stars img {
+    animation: none;
+    scroll-behavior: auto;
+    transition: none;
   }
 }
