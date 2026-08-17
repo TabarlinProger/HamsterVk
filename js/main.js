@@ -268,6 +268,7 @@ class Game {
     this._bgIndex = 0;
     this._centerTick = null;
     this._vkBridge = null;
+    this._platform = 'local';
     this._adLevelCounter = 0;
     this._pendingInterstitial = false;
     this._levelFailCounts = {};
@@ -672,7 +673,7 @@ class Game {
 
   _openLeaderboard() {
     this._syncLeaderboard();
-    if (this._vkBridge && typeof this._vkBridge.send === 'function') {
+    if (this._platform !== 'ok' && this._vkBridge && typeof this._vkBridge.send === 'function') {
       var score = this._leaderboardScore || 0;
       try {
         this._vkBridge.send('VKWebAppShowLeaderBoardBox', { user_result: score }).catch(function(e) {
@@ -1591,10 +1592,23 @@ document.addEventListener('DOMContentLoaded', function() {
   var _vkReady = false;
   var _vkStorageReady = false;
   var _vkInitPromise = null;
+  var _launchParams = readLaunchParams();
+  var _platform = _launchParams.vk_client === 'ok' ? 'ok' : 'vk';
 
   function normalizeVkLang(rawLang) {
     var value = (rawLang || '').toLowerCase();
     return value.indexOf('ru') === 0 ? 'ru' : 'en';
+  }
+
+  function readLaunchParams() {
+    var result = {};
+    try {
+      var params = new URLSearchParams(window.location.search);
+      params.forEach(function(value, key) {
+        result[key] = value;
+      });
+    } catch(e) {}
+    return result;
   }
 
   function readUrlLang() {
@@ -1616,27 +1630,32 @@ document.addEventListener('DOMContentLoaded', function() {
   window.finishSdkBootstrap = function() {
     if (!_vkReady || !_vkStorageReady || typeof game === 'undefined' || !game || game._graReady) return;
     game._vkBridge = _vkBridgeInstance;
+    game._platform = _platform;
     game._graReady = true;
     game._syncLeaderboard();
     game._tryStartApp();
   };
 
   window.prepareVkStorage = function() {
-    if (typeof StorageManager === 'undefined' || typeof StorageManager.initVkStorage !== 'function') {
+    if (typeof StorageManager === 'undefined' || typeof StorageManager.initPlatformStorage !== 'function') {
       _vkStorageReady = true;
       return Promise.resolve();
     }
     return _vkInitPromise.then(function() {
-      return StorageManager.initVkStorage(_vkBridgeInstance);
+      return StorageManager.initPlatformStorage(_platform, _vkBridgeInstance, _launchParams);
     }).then(function() {
       _vkStorageReady = true;
     });
   };
 
   _vkInitPromise = _vkBridgeInstance.send('VKWebAppInit').then(function() {
-    return _vkBridgeInstance.send('VKWebAppGetLaunchParams');
+    if (_platform === 'ok') return _launchParams;
+    return _vkBridgeInstance.send('VKWebAppGetLaunchParams').catch(function() {
+      return _launchParams;
+    });
   }).then(function(params) {
-    applyVkLanguage(params);
+    _launchParams = params || _launchParams;
+    applyVkLanguage(_launchParams);
     _vkReady = true;
     finishSdkBootstrap();
   }).catch(function(err) {

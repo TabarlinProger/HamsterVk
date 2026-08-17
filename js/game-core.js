@@ -442,7 +442,7 @@ class StorageManager {
   static load() {
     if (StorageManager._cache) return StorageManager._normalize(StorageManager._cache);
     try {
-      var raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+      var raw = localStorage.getItem(StorageManager._localKey());
       if (!raw) return StorageManager._defaultData();
       var data = JSON.parse(raw);
       return StorageManager._normalize(data);
@@ -455,9 +455,17 @@ class StorageManager {
     data = StorageManager._normalize(data);
     StorageManager._cache = data;
     try {
-      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(StorageManager._localKey(), JSON.stringify(data));
     } catch (e) {}
-    StorageManager._saveVk(data);
+    if (StorageManager._platform === 'vk' || StorageManager._platform === 'ok') StorageManager._saveVk(data);
+  }
+
+  static initPlatformStorage(platform, bridge, launchParams) {
+    StorageManager._platform = platform || 'local';
+    StorageManager._launchParams = launchParams || {};
+    StorageManager._cache = null;
+    if (StorageManager._platform === 'vk' || StorageManager._platform === 'ok') return StorageManager.initVkStorage(bridge);
+    return Promise.resolve();
   }
 
   static initVkStorage(bridge) {
@@ -469,17 +477,18 @@ class StorageManager {
       var entries = (res && res.keys) || [];
       for (var i = 0; i < entries.length; i++) values[entries[i].key] = entries[i].value || '';
 
-      var raw = values[CONFIG.STORAGE_KEY] || '';
-      if (!raw && values[CONFIG.STORAGE_KEY + '_0']) {
+      var baseKey = StorageManager._remoteKey();
+      var raw = values[baseKey] || '';
+      if (!raw && values[baseKey + '_0']) {
         raw = '';
         for (var ci = 0; ci < StorageManager.VK_CHUNK_COUNT; ci++) {
-          raw += values[CONFIG.STORAGE_KEY + '_' + ci] || '';
+          raw += values[baseKey + '_' + ci] || '';
         }
       }
 
       if (raw) {
         StorageManager._cache = StorageManager._normalize(JSON.parse(raw));
-        try { localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(StorageManager._cache)); } catch(e) {}
+        try { localStorage.setItem(StorageManager._localKey(), JSON.stringify(StorageManager._cache)); } catch(e) {}
       } else {
         StorageManager._cache = StorageManager.load();
       }
@@ -496,17 +505,18 @@ class StorageManager {
     if (!StorageManager._vkReady || !StorageManager._vkBridge || typeof StorageManager._vkBridge.send !== 'function') return;
     var raw = JSON.stringify(data);
     var chunkSize = StorageManager.VK_CHUNK_SIZE;
+    var baseKey = StorageManager._remoteKey();
     for (var i = 0; i < StorageManager.VK_CHUNK_COUNT; i++) {
       var value = raw.slice(i * chunkSize, (i + 1) * chunkSize);
       StorageManager._vkBridge.send('VKWebAppStorageSet', {
-        key: CONFIG.STORAGE_KEY + '_' + i,
+        key: baseKey + '_' + i,
         value: value
       }).catch(function(e) {
         console.error('VK storage save error:', e);
       });
     }
     StorageManager._vkBridge.send('VKWebAppStorageSet', {
-      key: CONFIG.STORAGE_KEY,
+      key: baseKey,
       value: ''
     }).catch(function(e) {
       console.error('VK storage cleanup error:', e);
@@ -514,8 +524,9 @@ class StorageManager {
   }
 
   static _vkKeys() {
-    var keys = [CONFIG.STORAGE_KEY];
-    for (var i = 0; i < StorageManager.VK_CHUNK_COUNT; i++) keys.push(CONFIG.STORAGE_KEY + '_' + i);
+    var baseKey = StorageManager._remoteKey();
+    var keys = [baseKey];
+    for (var i = 0; i < StorageManager.VK_CHUNK_COUNT; i++) keys.push(baseKey + '_' + i);
     return keys;
   }
 
@@ -552,8 +563,8 @@ class StorageManager {
 
   static resetProgress() {
     StorageManager._cache = StorageManager._defaultData();
-    localStorage.removeItem(CONFIG.STORAGE_KEY);
-    StorageManager._saveVk(StorageManager._cache);
+    localStorage.removeItem(StorageManager._localKey());
+    if (StorageManager._platform === 'vk' || StorageManager._platform === 'ok') StorageManager._saveVk(StorageManager._cache);
   }
 
   static _normalize(data) {
@@ -569,6 +580,14 @@ class StorageManager {
       settings: { musicVolume: 0.2, sfxVolume: 0.7, sfxEnabled: true }
     };
   }
+
+  static _remoteKey() {
+    return CONFIG.STORAGE_KEY + '_' + StorageManager._platform;
+  }
+
+  static _localKey() {
+    return StorageManager._remoteKey();
+  }
 }
 
 StorageManager.VK_CHUNK_SIZE = 3500;
@@ -576,3 +595,5 @@ StorageManager.VK_CHUNK_COUNT = 8;
 StorageManager._cache = null;
 StorageManager._vkBridge = null;
 StorageManager._vkReady = false;
+StorageManager._platform = 'local';
+StorageManager._launchParams = {};
