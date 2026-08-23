@@ -269,6 +269,7 @@ class Game {
     this._centerTick = null;
     this._vkBridge = null;
     this._platform = 'local';
+    this._launchParams = {};
     this._adLevelCounter = 0;
     this._pendingInterstitial = false;
     this._levelFailCounts = {};
@@ -641,7 +642,7 @@ class Game {
       document.getElementById('hint-ad-screen').classList.remove('hidden');
       // Hide "Да" button if no SDK available
       var yesBtn = document.getElementById('btn-hint-ad-yes');
-      if (!this._vkBridge) {
+      if (!this._canShowPlatformAds()) {
         yesBtn.classList.add('hidden');
       } else {
         yesBtn.classList.remove('hidden');
@@ -710,6 +711,13 @@ class Game {
 
   _gameplayStop() {}
 
+  _canShowPlatformAds() {
+    if (!this._vkBridge || typeof this._vkBridge.send !== 'function') return false;
+    if (this._platform !== 'ok') return true;
+    var platform = ((this._launchParams && this._launchParams.vk_platform) || '').toLowerCase();
+    return platform.indexOf('android') !== -1;
+  }
+
   _setPlatformPaused(paused) {
     this._platformPaused = !!paused;
     if (this._platformPaused) {
@@ -748,13 +756,13 @@ class Game {
   }
 
   _showVkNativeAd(adFormat) {
-    if (!this._vkBridge || typeof this._vkBridge.send !== 'function') return Promise.resolve(false);
+    if (!this._canShowPlatformAds()) return Promise.resolve(false);
     var self = this;
+    var payload = { ad_format: adFormat };
+    if (adFormat === 'reward') payload.use_waterfall = true;
     self._pauseForAd();
-    return self._vkBridge.send('VKWebAppCheckNativeAds', { ad_format: adFormat }).then(function(check) {
+    return self._vkBridge.send('VKWebAppCheckNativeAds', payload).then(function(check) {
       if (!check || check.result !== true) return false;
-      var payload = { ad_format: adFormat };
-      if (adFormat === 'reward') payload.use_waterfall = true;
       return self._vkBridge.send('VKWebAppShowNativeAds', payload).then(function(result) {
         return !!(result && result.result === true);
       });
@@ -768,7 +776,7 @@ class Game {
   }
 
  _showRewardedAd() {
-    if (!this._vkBridge) {
+    if (!this._canShowPlatformAds()) {
       this._returnToLevelAfterSoftlock();
       return;
     }
@@ -794,7 +802,7 @@ class Game {
   }
 
  _showHintAd() {
-    if (!this._vkBridge) {
+    if (!this._canShowPlatformAds()) {
       document.getElementById('hint-ad-screen')?.classList.add('hidden');
       return;
     }
@@ -815,7 +823,7 @@ class Game {
     var levelId = this.currentLevelId;
     var nextId = levelId + 1;
     if (nextId > this.levelManager.total) return;
-    if (!this._vkBridge) {
+    if (!this._canShowPlatformAds()) {
       this._skipCurrentLevel();
       return;
     }
@@ -846,7 +854,7 @@ class Game {
 
   _showInterstitial(callback) {
     var self = this;
-    if (!this._vkBridge) { if (callback) callback(); return; }
+    if (!this._canShowPlatformAds()) { if (callback) callback(); return; }
     this._showVkNativeAd('interstitial').then(function() {
       if (callback) callback();
       self._resumeMusicAfterAd();
@@ -1308,7 +1316,7 @@ class Game {
     var tutorialByLevel = {
       1: 'welcome',
       2: 'hints',
-      5: 'straight',
+      3: 'straight',
       11: 'corner',
       31: 'teleport',
       61: 'timer'
@@ -1631,6 +1639,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!_vkReady || !_vkStorageReady || typeof game === 'undefined' || !game || game._graReady) return;
     game._vkBridge = _vkBridgeInstance;
     game._platform = _platform;
+    game._launchParams = _launchParams || {};
     game._graReady = true;
     game._syncLeaderboard();
     game._tryStartApp();
