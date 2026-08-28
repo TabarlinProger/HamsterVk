@@ -443,7 +443,11 @@ class StorageManager {
     if (StorageManager._cache) return StorageManager._normalize(StorageManager._cache);
     try {
       var raw = localStorage.getItem(StorageManager._localKey());
-      if (!raw) return StorageManager._defaultData();
+      if (!raw) {
+        StorageManager._hasStoredData = false;
+        return StorageManager._defaultData();
+      }
+      StorageManager._hasStoredData = true;
       var data = JSON.parse(raw);
       return StorageManager._normalize(data);
     } catch (e) {
@@ -454,6 +458,7 @@ class StorageManager {
   static save(data) {
     data = StorageManager._normalize(data);
     StorageManager._cache = data;
+    StorageManager._hasStoredData = true;
     try {
       localStorage.setItem(StorageManager._localKey(), JSON.stringify(data));
     } catch (e) {}
@@ -487,6 +492,7 @@ class StorageManager {
       }
 
       if (raw) {
+        StorageManager._hasStoredData = true;
         StorageManager._cache = StorageManager._normalize(JSON.parse(raw));
         try { localStorage.setItem(StorageManager._localKey(), JSON.stringify(StorageManager._cache)); } catch(e) {}
       } else {
@@ -563,8 +569,13 @@ class StorageManager {
 
   static resetProgress() {
     StorageManager._cache = StorageManager._defaultData();
+    StorageManager._hasStoredData = false;
     localStorage.removeItem(StorageManager._localKey());
     if (StorageManager._platform === 'vk' || StorageManager._platform === 'ok') StorageManager._saveVk(StorageManager._cache);
+  }
+
+  static hasStoredData() {
+    return !!StorageManager._hasStoredData;
   }
 
   static _normalize(data) {
@@ -575,6 +586,7 @@ class StorageManager {
 
   static _defaultData() {
     return {
+      hasOpened: false,
       currentLevel: 1,
       completedLevels: {},
       settings: { musicVolume: 0.2, sfxVolume: 0.7, sfxEnabled: true }
@@ -597,3 +609,4 @@ StorageManager._vkBridge = null;
 StorageManager._vkReady = false;
 StorageManager._platform = 'local';
 StorageManager._launchParams = {};
+StorageManager._hasStoredData = false;

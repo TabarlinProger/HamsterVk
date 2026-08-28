@@ -323,7 +323,22 @@ class Game {
     if (this._appStarted) return;
     this._appStarted = true;
     if (document.body) document.body.classList.remove('loading');
+    if (!StorageManager.hasStoredData() && !this.storage.hasOpened) {
+      this._autoStartFirstLevel();
+      return;
+    }
     this._showMenu();
+  }
+
+  _autoStartFirstLevel() {
+    var data = StorageManager.load();
+    data.hasOpened = true;
+    StorageManager.save(data);
+    document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
+    document.getElementById('game-hud').classList.remove('hidden');
+    this.sound.stopMusic();
+    this.sound.playRandomGameMusic();
+    this._startLevelWithTutorial(1);
   }
 
   _loop(timestamp) {
