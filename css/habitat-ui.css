@@ -1,0 +1,535 @@
+/* Illustrated habitat UI adapted from the Android build. */
+
+.panel,
+.tutorial-panel,
+.leader-panel {
+  --panel-width: min(728px, calc(100vw - 8px));
+  position: relative;
+  isolation: isolate;
+  width: var(--panel-width);
+  max-width: var(--panel-width);
+  min-height: calc(var(--panel-width) * 0.85);
+  max-height: none;
+  padding: calc(var(--panel-width) * 0.25) calc(var(--panel-width) * 0.15) calc(var(--panel-width) * 0.16);
+  gap: 14px;
+  border: 0;
+  border-radius: 0;
+  border-image: url('../assets/habitat-ui/panel_plain_middle_v3.png') 340 330 340 330 fill /
+    calc(var(--panel-width) * 0.234807) calc(var(--panel-width) * 0.227901)
+    calc(var(--panel-width) * 0.234807) calc(var(--panel-width) * 0.227901) / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  overflow: visible;
+}
+
+.panel > *,
+.tutorial-panel > *,
+.leader-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+#settings-screen .panel {
+  scale: 1;
+  padding-bottom: calc(var(--panel-width) * 0.23);
+}
+
+#hint-ad-screen .panel {
+  --panel-width: min(800.8px, calc(100vw - 8px));
+  padding-top: calc(var(--panel-width) * 0.18);
+  padding-bottom: calc(var(--panel-width) * 0.15);
+}
+#softlock-screen .panel { gap: 10px; padding-bottom: calc(var(--panel-width) * 0.20); }
+
+.panel > h2,
+.tutorial-panel > h2,
+.leader-panel > h2 {
+  position: absolute;
+  left: 25%;
+  top: calc(var(--panel-width) * 0.13 - 5px);
+  width: 52%;
+  height: calc(var(--panel-width) * 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.panel > h2,
+.tutorial-panel > h2,
+.leader-panel > h2,
+.panel > p,
+.panel > div:not(.hint-ad-actions),
+.settings-slider > span,
+.panel > div > span,
+#tutorial-text,
+.leader-sub,
+#win-moves {
+  color: #51290d;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 1px 0 #ffe8af;
+}
+
+.panel > p { font-size: 18px; line-height: 1.3; text-align: center; }
+.panel > *:not(h2), .tutorial-panel > *:not(h2) { flex-shrink: 0; }
+#win-moves:empty { display: none; }
+
+.btn,
+.btn-primary,
+.btn-success,
+.btn-warning,
+.btn-danger,
+.btn-back {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0 !important;
+  border-radius: 0;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  -webkit-tap-highlight-color: transparent !important;
+  filter: drop-shadow(0 6px 7px rgba(0, 0, 0, 0.38));
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.btn:focus,
+.btn:focus-visible,
+.btn:active,
+.btn-back:focus,
+.btn-back:focus-visible,
+.btn-back:active,
+.lang-btn:focus,
+.lang-btn:focus-visible,
+.lang-btn:active {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+
+.btn:not(.btn-icon):not(.lang-btn) {
+  --button-image: url('../assets/habitat-ui/button_green_thin_v2.png');
+  --button-base-height: 56px;
+  --button-height: calc(var(--button-base-height) * 1.518 * var(--button-height-scale, 1));
+  --button-icon-size: 32px;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--button-height);
+  min-height: var(--button-height);
+  letter-spacing: 0;
+  overflow: visible;
+}
+
+.btn:not(.btn-icon):not(.lang-btn)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 0;
+  border-image: var(--button-image) 0 167.2 fill / 0 calc(var(--button-height) * 0.55) / 0 stretch;
+  pointer-events: none;
+}
+
+.btn:active,
+.btn-primary:active,
+.btn-success:active,
+.btn-warning:active,
+.btn-danger:active,
+.btn-back:active {
+  transform: scale(0.95);
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35)) brightness(0.88);
+}
+
+.btn.hidden { display: none !important; }
+.btn img, .btn-back img { object-fit: contain; opacity: 1; }
+
+#btn-settings,
+#btn-pause-restart,
+#btn-softlock-restart {
+  --button-image: url('../assets/habitat-ui/button_orange_thin_v2.png');
+}
+
+#btn-levels,
+#btn-pause-menu,
+#btn-win-menu,
+#btn-softlock-menu {
+  --button-image: url('../assets/habitat-ui/button_blue_thin_v2.png');
+}
+
+#btn-leaderboard,
+#btn-hint-ad-no {
+  --button-image: url('../assets/habitat-ui/button_red_thin_v2.png');
+}
+
+#btn-hint-ad-yes,
+#btn-softlock-ad,
+#btn-softlock-skip {
+  --button-image: url('../assets/habitat-ui/button_green_thin_v2.png');
+}
+
+.btn:not(.btn-icon):not(.lang-btn) > img {
+  position: relative;
+  width: var(--button-icon-size);
+  height: var(--button-icon-size);
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.btn:not(.btn-icon):not(.lang-btn) > span {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 0 auto;
+  text-align: center;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+#main-menu {
+  gap: 14px;
+}
+
+#main-menu .btn {
+  --button-base-height: 76.8px;
+  --button-icon-size: 57px;
+  width: min(91.8vw, 336.6px);
+  min-width: 0;
+  margin: 0 !important;
+  padding-inline: 21px;
+  gap: 9px;
+  font-size: 30px;
+  filter: drop-shadow(0 7px 8px rgba(0, 0, 0, 0.42));
+}
+
+#main-menu .btn img,
+#leaderboard-img {
+  width: var(--button-icon-size);
+  height: var(--button-icon-size);
+}
+
+#main-menu .btn span {
+  -webkit-text-stroke: 2.5px #102027;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.75);
+}
+
+#main-menu:not(.hidden) .btn { animation: habitatMenuButtonIn 0.34s ease both; }
+#main-menu:not(.hidden) #btn-levels { animation-delay: 0.04s; }
+#main-menu:not(.hidden) #btn-leaderboard { animation-delay: 0.08s; }
+#main-menu:not(.hidden) #btn-settings { animation-delay: 0.12s; }
+
+@keyframes habitatMenuButtonIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#pause-screen .btn,
+#win-screen .btn,
+#softlock-screen .btn,
+#tutorial-screen .btn { --button-height-scale: 0.9; }
+
+#pause-screen .panel > .btn,
+#win-screen .panel > .btn,
+#softlock-screen .panel > .btn {
+  --button-base-height: 72.8px;
+  --button-icon-size: 41.6px;
+  width: 282.9px !important;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 23px;
+  gap: 10px;
+  font-size: 23.4px;
+  white-space: nowrap;
+}
+
+#btn-tutorial-gotit {
+  --button-base-height: 72.8px;
+  width: 282.9px;
+  max-width: 100%;
+  min-width: 0;
+  padding-inline: 26px;
+  font-size: 23.4px;
+}
+
+.hint-ad-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr);
+  gap: 10px;
+  width: 100%;
+}
+
+#hint-ad-screen .panel {
+  min-height: calc(var(--panel-width) * 0.6545);
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: center;
+  align-items: stretch;
+}
+
+#hint-ad-screen .panel > p { align-self: center; margin: 0; }
+.hint-ad-actions { align-self: end; }
+#hint-ad-screen .btn { --button-height-scale: 0.8; width: 100%; min-width: 0; padding: 8px 12px; gap: 6px; font-size: 18px; }
+#btn-hint-ad-yes { --button-icon-size: 45.54px; }
+#btn-softlock-ad, #btn-softlock-skip { --button-icon-size: 53.13px; }
+
+#hint-ad-screen h2,
+#softlock-screen h2,
+#leaderboard-screen h2 { font-size: 28.8px; }
+#hint-ad-screen .panel > p,
+#softlock-screen .panel > p { font-size: 21.6px; }
+#hint-ad-screen .btn { font-size: 21.6px; }
+#softlock-screen .panel > .btn { font-size: 28.08px; }
+.leader-sub { font-size: 16.8px; }
+.leader-rank { font-size: 21.6px; }
+.leader-name,
+.leader-score { font-size: 19.2px; }
+.leader-loading,
+.leader-no-data { font-size: 19.2px; }
+
+.btn-back {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left));
+  z-index: 30;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 76.8px !important;
+  height: 76.8px;
+  min-width: 0 !important;
+  min-height: 76.8px;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.btn-back::before { content: none; }
+.btn-back > img { width: 67.2px; height: 67.2px; margin: 0; padding: 0; }
+
+.lang-btn {
+  --language-size: min(149.76px, calc(var(--panel-width) * 0.42 - 8px));
+  position: relative;
+  isolation: isolate;
+  width: var(--language-size) !important;
+  min-width: var(--language-size) !important;
+  height: var(--language-size);
+  padding: 12px !important;
+  background: transparent !important;
+  border: 0 !important;
+  filter: none;
+  overflow: visible;
+}
+
+.lang-btn.active,
+.lang-btn.active:focus,
+.lang-btn.active:focus-visible,
+.lang-btn.active:active {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.lang-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: transparent url('../assets/ui_button_round_v2.png') center / contain no-repeat;
+  filter: grayscale(0.85) brightness(0.58);
+  pointer-events: none;
+}
+
+.lang-btn > img { position: relative; z-index: 1; width: 80% !important; height: auto !important; aspect-ratio: 1; }
+.lang-btn.active::before { filter: none; }
+
+#btn-music-toggle {
+  --button-base-height: 67.2px;
+  --button-height-scale: 0.85;
+  position: relative;
+  isolation: isolate;
+  width: 134.4px !important;
+  min-width: 134.4px !important;
+  padding: 12px 26.4px !important;
+  font-size: 28.8px;
+  filter: none;
+}
+
+#btn-music-toggle::before { filter: grayscale(0.85) brightness(0.58); }
+#btn-music-toggle.enabled::before { filter: none; }
+
+#settings-screen .panel > div { gap: 19.2px !important; }
+#settings-screen .panel > div > span,
+#settings-screen .settings-slider > span { font-size: 28.8px !important; }
+#settings-screen .settings-slider { gap: 19.2px; }
+#settings-screen .settings-slider input { width: min(288px, 62.4vw); }
+
+#game-hud {
+  --hud-button-size: 140.4px;
+  --hud-icon-size: 74.88px;
+  --hud-left: 35px;
+  --hud-pause-top: 19px;
+  --hud-hint-top: 175px;
+}
+
+#btn-pause,
+#btn-hint {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  width: calc(var(--hud-button-size) * var(--hud-button-scale));
+  height: calc(var(--hud-button-size) * var(--hud-button-scale));
+  min-height: calc(var(--hud-button-size) * var(--hud-button-scale));
+  padding: 0;
+  left: calc(var(--hud-left) + env(safe-area-inset-left));
+  translate: -30px -10px;
+}
+
+#btn-pause { --hud-button-scale: 1.1; top: calc(var(--hud-pause-top) + env(safe-area-inset-top)); }
+#btn-hint {
+  --hud-button-scale: 0.9;
+  left: calc(var(--hud-left) + var(--hud-button-size) * 0.1 + env(safe-area-inset-left));
+  top: calc((var(--hud-hint-top) + var(--hud-pause-top) + var(--hud-button-size) * 0.1 + var(--hud-icon-size) * 0.96865) * 0.5 + env(safe-area-inset-top));
+  overflow: visible;
+}
+
+#btn-pause img,
+#btn-hint img {
+  width: calc(var(--hud-icon-size) * var(--hud-button-scale));
+  height: calc(var(--hud-icon-size) * var(--hud-button-scale));
+}
+
+#btn-hint img { scale: 1.22; object-fit: contain; }
+#win-stars img, .leader-star-icon { scale: 1.2; object-fit: contain; }
+.hud-hearts img { scale: 1.12; zoom: 1.2; object-fit: contain; }
+.hud-hearts,
+.hud-counter { translate: 0 -10px; }
+
+#leaderboard-screen { justify-content: center; padding-top: 0; }
+.leader-entries { max-height: calc(var(--panel-width) * 0.36); }
+.leader-row,
+.leader-player {
+  background: rgba(255, 239, 190, 0.5);
+  border: 1px solid rgba(105, 56, 17, 0.24);
+  border-radius: 8px;
+}
+.leader-rank, .leader-name, .leader-score, .leader-loading, .leader-no-data {
+  color: #51290d;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 1px 0 #ffe8af;
+}
+
+#chapters-carousel,
+#levels-grid {
+  background: transparent;
+  scrollbar-color: transparent transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#chapters-carousel::-webkit-scrollbar,
+#levels-grid::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+#chapters-carousel::-webkit-scrollbar-track,
+#chapters-carousel::-webkit-scrollbar-thumb,
+#levels-grid::-webkit-scrollbar-track,
+#levels-grid::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 0;
+}
+
+.chapter-slide,
+.chapter-slide.centered,
+.level-card,
+.level-card.centered {
+  box-shadow: none;
+}
+
+@media (max-width: 600px), (max-height: 560px) {
+  .panel, .tutorial-panel, .leader-panel {
+    --panel-width: min(559px, calc(100vw - 8px));
+    gap: 12px;
+  }
+  #softlock-screen .panel { gap: 8px; }
+  .panel > h2, .tutorial-panel > h2, .leader-panel > h2 { font-size: 23.4px; }
+  #win-screen h2, #tutorial-title { font-size: 20.8px; }
+  #hint-ad-screen h2, #leaderboard-screen h2 { font-size: 24.96px; }
+  #softlock-screen h2 { font-size: 28.08px; }
+  .panel > p, #tutorial-text { font-size: 20.8px; }
+  #hint-ad-screen .panel > p, #softlock-screen .panel > p { font-size: 24.96px; }
+  .panel .btn:not(.lang-btn), .tutorial-panel .btn { font-size: 20.8px; }
+  #hint-ad-screen .btn { font-size: 24.96px; gap: 5px; padding-inline: 10px; }
+  #softlock-screen .panel > .btn { font-size: 24.96px; }
+  .leader-sub { font-size: 16.8px; }
+  .leader-rank { font-size: 19.2px; }
+  .leader-name, .leader-score { font-size: 18px; }
+  .leader-loading, .leader-no-data { font-size: 19.2px; }
+  #game-hud { --hud-button-size: 115.44px; --hud-icon-size: 65.52px; --hud-left: 10px; --hud-pause-top: 8px; --hud-hint-top: 104px; }
+  .lang-btn { --language-size: min(134.4px, calc(var(--panel-width) * 0.42 - 8px)); }
+  #settings-screen .settings-slider { gap: 12px; }
+  #settings-screen .settings-slider > span, #settings-screen .panel > div > span { font-size: 24px !important; }
+  .settings-slider input { min-width: 0; }
+  .btn-back { width: 67.2px !important; height: 67.2px; min-height: 67.2px; }
+  .btn-back > img { width: 57.6px; height: 57.6px; }
+}
+
+@media (orientation: portrait) and (max-height: 680px),
+       (orientation: landscape) and (max-height: 560px) {
+  .panel, .tutorial-panel, .leader-panel { gap: 8px; }
+  #softlock-screen .panel { gap: 6px; }
+  .panel .btn:not(.lang-btn), .tutorial-panel .btn { --button-base-height: 59.8px; font-size: 20.8px; }
+  #main-menu .btn { --button-base-height: 67.2px; }
+  .lang-btn { --language-size: 115.2px; padding: 12px !important; }
+  .tutorial-visual-wrap, #tutorial-canvas { width: 150px; height: 101px; }
+}
+
+@media (orientation: landscape) and (max-height: 460px) {
+  .panel, .tutorial-panel, .leader-panel { --panel-width: min(494px, calc((100dvh - 8px) / 0.85), calc(100vw - 8px)); gap: 7px; }
+  #settings-screen .panel { --panel-width: min(468px, calc((100dvh - 8px) / 0.85), calc(100vw - 8px)); }
+  #softlock-screen .panel { --panel-width: min(416px, calc((100dvh - 8px) / 0.85), calc(100vw - 8px)); gap: 2px; }
+  .panel .btn:not(.lang-btn), .tutorial-panel .btn { --button-base-height: 40px; }
+  #softlock-screen .panel > .btn { --button-base-height: 36.5px; }
+  #softlock-screen .panel > p { font-size: 14px; }
+  .tutorial-visual-wrap, #tutorial-canvas { width: 124px; height: 83px; }
+  #tutorial-text { font-size: 13px; line-height: 1.25; }
+  #win-stars img { width: 38px; height: 38px; }
+  #game-hud { --hud-button-size: 81.12px; --hud-icon-size: 46.8px; --hud-hint-top: 78px; }
+  #main-menu { gap: 4px; }
+  #main-menu .btn {
+    --button-base-height: 48px;
+    --button-icon-size: 36px;
+    width: min(290px, calc(100vw - 24px));
+    padding-inline: 14px;
+    gap: 6px;
+    font-size: 20px;
+  }
+}
+
+@media (orientation: portrait) {
+  #game-hud { --hud-button-size: 124.8px; --hud-icon-size: 71.76px; --hud-left: 8px; --hud-pause-top: 7px; }
+  #btn-hint {
+    left: calc((118px + var(--hud-left) + var(--hud-button-size) * 0.1 + var(--hud-icon-size) * 0.932) * 0.5 + env(safe-area-inset-left));
+    top: calc(7px + var(--hud-button-size) * 0.1 + env(safe-area-inset-top));
+  }
+}
+
+@media (max-width: 380px) {
+  #main-menu .btn { font-size: 25.5px; --button-icon-size: 51px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel, .tutorial-panel, .btn { animation: none; transition: none; }
+}

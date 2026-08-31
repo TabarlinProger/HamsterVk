@@ -19,7 +19,7 @@ var TUTORIAL_IMAGES = {
 };
 TUTORIAL_IMAGES.tile.src = 'assets/Tile.webp';
 TUTORIAL_IMAGES.timer.src = 'assets/Timer.png';
-TUTORIAL_IMAGES.hint.src = 'assets/hint.png';
+TUTORIAL_IMAGES.hint.src = 'assets/hint.png?v=20260831-ui-v1';
 
 function drawTutorialDiagram(id, ctx, w, h) {
   ctx.clearRect(0, 0, w, h);
@@ -655,13 +655,7 @@ class Game {
     if (this.hintsRemaining <= 0) {
       // Show popup asking to watch ad (always, even without SDK)
       document.getElementById('hint-ad-screen').classList.remove('hidden');
-      // Hide "Да" button if no SDK available
-      var yesBtn = document.getElementById('btn-hint-ad-yes');
-      if (!this._canShowPlatformAds()) {
-        yesBtn.classList.add('hidden');
-      } else {
-        yesBtn.classList.remove('hidden');
-      }
+      document.getElementById('btn-hint-ad-yes').classList.remove('hidden');
       return;
     }
     var tile = this.board.findHintTile();
@@ -713,7 +707,7 @@ class Game {
     playerDiv.className = 'leader-player';
     playerDiv.innerHTML = '<span class="leader-rank">#</span>' +
       '<span class="leader-name">' + _('playerName') + '</span>' +
-      '<span class="leader-score"><img src="assets/star.png" class="leader-star-icon">' + this._calcTotalStars() + '</span>';
+      '<span class="leader-score"><img src="assets/star.png?v=20260831-ui-v1" class="leader-star-icon">' + this._calcTotalStars() + '</span>';
   }
 
   _escapeHtml(text) {
@@ -901,11 +895,8 @@ class Game {
   _showSettings() {
     document.querySelectorAll('.screen').forEach(function(s) { s.classList.add('hidden'); });
     document.getElementById('settings-screen').classList.remove('hidden');
-    // Update sound button text
-    var musicBtn = document.getElementById('btn-music-toggle');
     var enabled = this.sound.isSfxEnabled();
-    musicBtn.textContent = enabled ? _('musicOn') : _('musicOff');
-    musicBtn.style.background = enabled ? 'rgba(5,150,105,0.5)' : '';
+    this._updateMusicToggle(enabled);
     var musicSlider = document.getElementById('music-volume-slider');
     if (musicSlider) musicSlider.value = this.sound.getMusicVolume();
     // Highlight current language
@@ -915,15 +906,21 @@ class Game {
 
   _toggleMusic() {
     var enabled = this.sound.toggleSfx();
-    var musicBtn = document.getElementById('btn-music-toggle');
-    musicBtn.textContent = enabled ? _('musicOn') : _('musicOff');
-    musicBtn.style.background = enabled ? 'rgba(5,150,105,0.5)' : '';
+    this._updateMusicToggle(enabled);
     try {
       var data = StorageManager.load();
       data.settings.sfxEnabled = enabled;
       delete data.music;
       StorageManager.save(data);
     } catch(e) {}
+  }
+
+  _updateMusicToggle(enabled) {
+    var musicBtn = document.getElementById('btn-music-toggle');
+    if (!musicBtn) return;
+    var label = document.getElementById('music-toggle-label');
+    if (label) label.textContent = enabled ? _('musicOn') : _('musicOff');
+    musicBtn.classList.toggle('enabled', enabled);
   }
 
   _setMusicVolume(volume) {
@@ -963,16 +960,14 @@ class Game {
     var result = StorageManager.markCompleted(levelId, this.moves, this.lives);
     this._syncLeaderboard();
     var self2 = this;
-    setTimeout(function() {
-      var start = performance.now();
-      var DUR = CONFIG.ANIMATION.WIN_REVEAL_DURATION;
-      var animate = function(now) {
-        self2._reveal = Math.min(1, (now - start) / DUR);
-        if (self2._reveal < 1) { requestAnimationFrame(animate); }
-      };
-      requestAnimationFrame(animate);
-      self2._showWinScreen(result.stars, result.bestMoves, levelId);
-    }, 1000);
+    var start = performance.now();
+    var DUR = CONFIG.ANIMATION.WIN_REVEAL_DURATION;
+    var animate = function(now) {
+      self2._reveal = Math.min(1, (now - start) / DUR);
+      if (self2._reveal < 1) { requestAnimationFrame(animate); }
+    };
+    requestAnimationFrame(animate);
+    self2._showWinScreen(result.stars, result.bestMoves, levelId);
   }
 
   _onSoftlock() {
@@ -1047,7 +1042,7 @@ class Game {
     }
     document.getElementById('levels-view').classList.add('hidden');
     document.getElementById('chapters-carousel').classList.remove('hidden');
-    document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/undo.png" alt="">' + _('backNav');
+    document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/habitat-ui/icon_back.png" alt="">';
 
     // Wheel-to-horizontal scroll
     this._addDragScroll(carousel);
@@ -1133,7 +1128,7 @@ class Game {
   _showWinScreen(stars, bestMoves, levelId) {
     var starsHtml = '';
     for (var i = 0; i < 3; i++) {
-      starsHtml += '<img src="assets/star.png" class="' + (i < stars ? '' : 'empty') + '" alt="">';
+      starsHtml += '<img src="assets/star.png?v=20260831-ui-v1" class="' + (i < stars ? '' : 'empty') + '" alt="">';
     }
     document.getElementById('win-stars').innerHTML = starsHtml;
     document.getElementById('win-level-text').textContent = _('winLevel') + ' ' + levelId + ' ' + _('winPassed');
@@ -1155,7 +1150,7 @@ class Game {
     document.getElementById('hud-remaining').textContent = remaining + '/' + total;
     var heartsHtml = '';
     for (var h = 0; h < CONFIG.MAX_LIVES; h++) {
-      heartsHtml += '<img src="assets/ui-heart.png" class="' + (h >= this.lives ? 'lost' : '') + '" alt="">';
+      heartsHtml += '<img src="assets/ui-heart.png?v=20260831-ui-v1" class="' + (h >= this.lives ? 'lost' : '') + '" alt="">';
     }
     document.getElementById('hud-lives').innerHTML = heartsHtml;
     document.getElementById('hud-hint-count').textContent = this.hintsRemaining;
@@ -1199,7 +1194,7 @@ class Game {
     this._currentChapter = chapterIdx;
     document.getElementById('chapters-carousel').classList.add('hidden');
     document.getElementById('levels-view').classList.remove('hidden');
-    document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/undo.png" alt="">' + _('backNav');
+    document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/habitat-ui/icon_back.png" alt="">';
     var grid = document.getElementById('levels-grid');
     grid.innerHTML = '';
     var startLevel = chapterIdx * 10 + 1;
@@ -1236,7 +1231,7 @@ class Game {
       var starCount = completed ? completed.stars : 0;
       for (var s = 0; s < 3; s++) {
         var starImg = document.createElement('img');
-        starImg.src = 'assets/star.png';
+        starImg.src = 'assets/star.png?v=20260831-ui-v1';
         if (s >= starCount) starImg.className = 'empty';
         starsDiv.appendChild(starImg);
       }
@@ -1374,7 +1369,7 @@ class Game {
     }
     var musicBtn = document.getElementById('btn-music-toggle');
     if (musicBtn && this.sound) {
-      musicBtn.textContent = this.sound.isSfxEnabled() ? _('musicOn') : _('musicOff');
+      this._updateMusicToggle(this.sound.isSfxEnabled());
     }
   }
 
@@ -1524,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', function() {
     game._showLevelSelect(targetChapter);
     document.getElementById('levels-view').classList.add('hidden');
     document.getElementById('chapters-carousel').classList.remove('hidden');
-    document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/undo.png" alt="">' + _('backNav');
+    document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/habitat-ui/icon_back.png" alt="">';
     var carousel = document.getElementById('chapters-carousel');
     if (carousel.children[targetChapter]) {
       carousel.children[targetChapter].scrollIntoView({ behavior: 'auto', inline: 'center' });
@@ -1536,7 +1531,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       document.getElementById('levels-view').classList.add('hidden');
       document.getElementById('chapters-carousel').classList.remove('hidden');
-      document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/undo.png" alt="">' + _('backNav');
+      document.getElementById('btn-level-select-menu').innerHTML = '<img src="assets/habitat-ui/icon_back.png" alt="">';
       // Scroll to the chapter we came from
       var ch = game._currentChapter;
       if (ch !== undefined) {
@@ -1567,7 +1562,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-music-toggle').addEventListener('click', function() { game._toggleMusic(); });
   document.getElementById('music-volume-slider').addEventListener('input', function(e) { game._setMusicVolume(e.target.value); });
   document.getElementById('btn-settings-back').addEventListener('click', function() { game._showMenu(); });
-  document.getElementById('btn-settings-back-mobile').addEventListener('click', function() { game._showMenu(); });
   document.getElementById('btn-tutorial-gotit').addEventListener('click', function() { game._hideTutorial(); });
   document.getElementById('btn-leaderboard').addEventListener('click', function() { game._openLeaderboard(); });
   document.getElementById('btn-leader-back').addEventListener('click', function() { game._showMenu(); });

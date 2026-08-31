@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Сортируй Плитки: Тапай и Играй</title>
+  <title>Стрелки: Спаси хомяков</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="assets/Icon.png">
   <link rel="apple-touch-icon" href="assets/Icon.png">
   <link rel="stylesheet" href="css/style.css?v=20260811-mobile-field-center">
+  <link rel="stylesheet" href="css/habitat-ui.css?v=20260831-vk-ui-v8">
 </head>
 <body class="loading">
 
@@ -20,8 +21,8 @@
   <!-- HUD -->
   <div id="game-hud" class="hidden">
     <!-- Left: pause (top), hint (below) -->
-    <button class="btn btn-icon btn-pause" id="btn-pause"><img src="assets/home.png" alt=""></button>
-    <button class="btn btn-icon" id="btn-hint"><img src="assets/hint.png" alt=""><span id="hud-hint-count"></span></button>
+    <button class="btn btn-icon btn-pause" id="btn-pause" aria-label="Пауза"><img src="assets/habitat-ui/icon_pause.png" alt=""></button>
+    <button class="btn btn-icon" id="btn-hint"><img src="assets/hint.png?v=20260831-ui-v1" alt=""><span id="hud-hint-count"></span></button>
     <!-- Right: hearts (top, centered with pause), counter, timer -->
     <div id="hud-lives" class="hud-hearts"></div>
     <div class="hud-counter">
@@ -35,16 +36,16 @@
 
   <!-- Главное меню -->
   <div id="main-menu" class="screen">
-    <button class="btn" id="btn-continue"><img src="assets/play.png" alt=""><span data-i18n="continue">Продолжить</span></button>
-    <button class="btn" id="btn-levels"><img src="assets/star.png" alt=""><span data-i18n="levels">Уровни</span></button>
-    <button class="btn" id="btn-leaderboard"><img src="assets/Leaderboard.png" id="leaderboard-img" alt=""><span data-i18n="leaderboard">Лидеры</span></button>
-    <button class="btn" id="btn-settings"><img src="assets/setting.png" alt=""><span data-i18n="settings">Настройки</span></button>
+    <button class="btn" id="btn-continue"><img src="assets/habitat-ui/icon_play.png" alt=""><span data-i18n="continue">Продолжить</span></button>
+    <button class="btn" id="btn-levels"><img src="assets/habitat-ui/icon_levels.png" alt=""><span data-i18n="levels">Уровни</span></button>
+    <button class="btn" id="btn-leaderboard"><img src="assets/Leaderboard.png?v=20260831-ui-v1" id="leaderboard-img" alt=""><span data-i18n="leaderboard">Лидеры</span></button>
+    <button class="btn" id="btn-settings"><img src="assets/habitat-ui/icon_settings.png" alt=""><span data-i18n="settings">Настройки</span></button>
   </div>
 
   <!-- Выбор уровня -->
   <div id="level-select" class="screen hidden screen-overlay">
     <div id="chapters-carousel"></div>
-    <button class="btn-back" id="btn-level-select-menu"><img src="assets/undo.png" alt=""><span data-i18n="backNav">Назад</span></button>
+    <button class="btn-back" id="btn-level-select-menu" aria-label="Назад"><img src="assets/habitat-ui/icon_back.png" alt=""></button>
     <div id="levels-view" class="hidden">
       <div id="levels-grid"></div>
     </div>
@@ -54,9 +55,9 @@
   <div id="pause-screen" class="screen hidden screen-overlay">
     <div class="panel">
       <h2 data-i18n="pauseTitle">Пауза</h2>
-      <button class="btn btn-primary" id="btn-resume"><img src="assets/play.png" alt=""><span data-i18n="resume">Продолжить</span></button>
-      <button class="btn" id="btn-pause-restart"><img src="assets/restart.png" alt=""><span data-i18n="restart">Заново</span></button>
-      <button class="btn" id="btn-pause-menu"><img src="assets/home.png" alt=""><span data-i18n="back">В меню</span></button>
+      <button class="btn btn-primary" id="btn-resume"><img src="assets/habitat-ui/icon_play.png" alt=""><span data-i18n="resume">Продолжить</span></button>
+      <button class="btn" id="btn-pause-restart"><img src="assets/habitat-ui/icon_restart.png" alt=""><span data-i18n="restart">Заново</span></button>
+      <button class="btn" id="btn-pause-menu"><img src="assets/habitat-ui/icon_home.png" alt=""><span data-i18n="back">В меню</span></button>
     </div>
   </div>
 
@@ -67,8 +68,8 @@
       <p id="win-level-text"></p>
       <div id="win-stars"></div>
       <div id="win-moves"></div>
-      <button class="btn btn-success" id="btn-next-level"><img src="assets/play.png" alt=""><span data-i18n="next">Дальше</span></button>
-      <button class="btn" id="btn-win-menu"><img src="assets/home.png" alt=""><span data-i18n="back">В меню</span></button>
+      <button class="btn btn-success" id="btn-next-level"><img src="assets/habitat-ui/icon_play.png" alt=""><span data-i18n="next">Дальше</span></button>
+      <button class="btn" id="btn-win-menu"><img src="assets/habitat-ui/icon_home.png" alt=""><span data-i18n="back">В меню</span></button>
     </div>
   </div>
 
@@ -77,10 +78,10 @@
     <div class="panel">
       <h2 data-i18n="softlockTitle">Нет ходов</h2>
       <p data-i18n="softlockText">Хомяки заблокированы</p>
-      <button class="btn btn-warning hidden" id="btn-softlock-skip"><img src="assets/Ads.png" alt=""><span data-i18n="skipAd">Пропустить</span></button>
-      <button class="btn btn-success" id="btn-softlock-ad"><img src="assets/Ads.png" alt=""><span data-i18n="returnAd">Вернуться</span></button>
-      <button class="btn" id="btn-softlock-restart"><img src="assets/restart.png" alt=""><span data-i18n="restart">Заново</span></button>
-      <button class="btn" id="btn-softlock-menu"><img src="assets/home.png" alt=""><span data-i18n="back">В меню</span></button>
+      <button class="btn btn-warning hidden" id="btn-softlock-skip"><img src="assets/habitat-ui/icon_rewarded_ad.png" alt=""><span data-i18n="skipAd">Пропустить</span></button>
+      <button class="btn btn-success" id="btn-softlock-ad"><img src="assets/habitat-ui/icon_rewarded_ad.png" alt=""><span data-i18n="returnAd">Вернуться</span></button>
+      <button class="btn" id="btn-softlock-restart"><img src="assets/habitat-ui/icon_restart.png" alt=""><span data-i18n="restart">Заново</span></button>
+      <button class="btn" id="btn-softlock-menu"><img src="assets/habitat-ui/icon_home.png" alt=""><span data-i18n="back">В меню</span></button>
     </div>
   </div>
 
@@ -89,10 +90,10 @@
     <div class="panel">
       <h2 data-i18n="hintsTitle">Подсказки кончились</h2>
       <p data-i18n="hintsText" style="text-align:center;">Посмотреть рекламу и получить 3 подсказки?</p>
-      <div style="display:flex;gap:16px;width:100%;">
-        <button class="btn" id="btn-hint-ad-no" style="min-width:unset;flex:1;padding:8px 16px;" data-i18n="no">Нет</button>
-        <button class="btn btn-success" id="btn-hint-ad-yes" style="min-width:unset;flex:1;padding:8px 16px;display:flex;flex-direction:row;align-items:center;gap:8px;">
-          <img src="assets/Ads.png" style="width:40px;height:40px;" alt="">
+      <div class="hint-ad-actions">
+        <button class="btn" id="btn-hint-ad-no"><span data-i18n="no">Нет</span></button>
+        <button class="btn btn-success" id="btn-hint-ad-yes">
+          <img src="assets/habitat-ui/icon_rewarded_ad.png" alt="">
           <span data-i18n="watch">Смотреть</span>
         </button>
       </div>
@@ -101,7 +102,7 @@
 
   <!-- Настройки -->
   <div id="settings-screen" class="screen hidden screen-overlay">
-    <button class="btn-back settings-back-mobile" id="btn-settings-back-mobile"><img src="assets/undo.png" alt=""><span data-i18n="backNav">Назад</span></button>
+    <button class="btn-back" id="btn-settings-back" aria-label="Назад"><img src="assets/habitat-ui/icon_back.png" alt=""></button>
     <div class="panel">
       <h2 data-i18n="settings">Настройки</h2>
       <div style="display:flex;gap:16px;width:100%;justify-content:center;">
@@ -110,19 +111,18 @@
       </div>
       <div style="display:flex;align-items:center;gap:16px;width:100%;justify-content:center;">
         <span style="font-size:24px;font-weight:700;" data-i18n="music">Звуки</span>
-        <button class="btn" id="btn-music-toggle" style="min-width:unset;padding:16px 32px;" data-i18n="musicOn">Вкл</button>
+        <button class="btn" id="btn-music-toggle" style="min-width:unset;padding:16px 32px;"><span id="music-toggle-label" data-i18n="musicOn">Вкл</span></button>
       </div>
       <label class="settings-slider">
         <span data-i18n="musicVolume">Музыка</span>
         <input type="range" id="music-volume-slider" min="0" max="0.4" step="0.01" value="0.2">
       </label>
-      <button class="btn-back" id="btn-settings-back"><img src="assets/undo.png" alt=""><span data-i18n="backNav">Назад</span></button>
     </div>
   </div>
 
   <!-- Таблица лидеров -->
   <div id="leaderboard-screen" class="screen hidden screen-overlay">
-    <button class="btn-back" id="btn-leader-back"><img src="assets/undo.png" alt=""><span data-i18n="backNav">Назад</span></button>
+    <button class="btn-back" id="btn-leader-back" aria-label="Назад"><img src="assets/habitat-ui/icon_back.png" alt=""></button>
     <div class="leader-panel">
       <h2 data-i18n="leaderTitle">Таблица лидеров</h2>
       <p class="leader-sub" data-i18n="leaderSub">Проходи уровни на 3 звезды, чтобы выйти в лидеры</p>
@@ -152,7 +152,8 @@
   <script src="js/sound.js?v=20260624-menu-music"></script>
   <script src="js/input.js?v=20260816-vk-api"></script>
   <script src="js/locales.js?v=20260624-i18n-refresh"></script>
-  <script src="js/main.js?v=20260816-vk-api"></script>
+  <script src="js/button-labels.js?v=20260831-vk-ui-v1"></script>
+  <script src="js/main.js?v=20260831-vk-ui-v1"></script>
 
 </body>
 </html>

@@ -234,7 +234,7 @@ button, input, select, textarea {
 /* Hearts */
 .hud-hearts {
   position: absolute;
-  top: 69px; right: 19px;
+  top: 69px; right: 40px;
   display: flex;
   gap: 5px;
   pointer-events: auto;
@@ -255,7 +255,7 @@ button, input, select, textarea {
 /* Hamster counter */
 .hud-counter {
   position: absolute;
-  top: 148px; right: 19px;
+  top: 148px; right: 40px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -301,12 +301,6 @@ button, input, select, textarea {
 #btn-hint img { width: 48px; height: 48px; }
 
 /* ==================== WIN SCREEN ==================== */
-
-#win-screen.screen-overlay {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
 
 #win-stars {
   display: flex;
